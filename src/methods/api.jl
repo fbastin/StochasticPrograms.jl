@@ -577,12 +577,28 @@ function Base.getindex(stochasticprogram::StochasticProgram, stage::Integer, nam
         obj = obj_dict[name]
         if obj isa DecisionRef
             return DecisionVariable(stochasticprogram, stage, index(obj))
+        elseif obj isa JuMP.Containers.DenseAxisArray{<:DecisionRef}
+            mapped = map(obj.data) do dvar
+                return DecisionVariable(stochasticprogram, stage, index(dvar))
+            end
+            return JuMP.Containers.DenseAxisArray(mapped, obj.axes...)
+        elseif obj isa JuMP.Containers.SparseAxisArray{<:DecisionRef}
+            mapped = Dict(k => DecisionVariable(stochasticprogram, stage, index(v)) for (k, v) in obj.data)
+            return JuMP.Containers.SparseAxisArray(mapped)
         elseif obj isa AbstractArray{<:DecisionRef}
             return map(obj) do dvar
                 return DecisionVariable(stochasticprogram, stage, index(dvar))
             end
         elseif obj isa ConstraintRef{Model, <:CI{<:DecisionLike}}
             return SPConstraintRef(stochasticprogram, stage, obj)
+        elseif obj isa JuMP.Containers.DenseAxisArray{<:ConstraintRef{Model, <:CI{<:DecisionLike}}}
+            mapped = map(obj.data) do cref
+                return SPConstraintRef(stochasticprogram, stage, cref)
+            end
+            return JuMP.Containers.DenseAxisArray(mapped, obj.axes...)
+        elseif obj isa JuMP.Containers.SparseAxisArray{<:ConstraintRef{Model, <:CI{<:DecisionLike}}}
+            mapped = Dict(k => SPConstraintRef(stochasticprogram, stage, v) for (k, v) in obj.data)
+            return JuMP.Containers.SparseAxisArray(mapped)
         elseif obj isa AbstractArray{<:ConstraintRef{Model, <:CI{<:DecisionLike}}}
             return map(obj) do cref
                 return SPConstraintRef(stochasticprogram, stage, cref)

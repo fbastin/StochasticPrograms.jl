@@ -56,7 +56,7 @@ function prepare_master_objective!(quasigradient::AbstractQuasiGradient)
         obj = objective_function(quasigradient.structure.first_stage)
         x = all_decision_variables(quasigradient.structure.first_stage, 1)
         quasigradient.data.master_objective = moi_function(obj)
-        quasigradient.c .= JuMP._affine_coefficient.(obj, x)
+        quasigradient.c .= JuMP.coefficient.(obj, x)
     end
     # Sense-correct initial objective
     coeff = sense == MOI.MIN_SENSE ? 1.0 : -1.0

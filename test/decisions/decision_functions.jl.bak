@@ -27,8 +27,7 @@ using Test
 using MathOptInterface
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
-import MutableArithmetics
-const MA = MutableArithmetics
+const MA = MOI.MutableArithmetics
 
 function test_vectorization(x, fx, y, fy, z, fz, w, fw)
     g = VectorAffineDecisionFunction(
@@ -696,18 +695,18 @@ function test_scalar_operations(x, fx, y, fy, z, fz, w, fw)
                 ) - SingleDecision(x) - MOI.VariableIndex(w.value)
         end
         @testset "modification" begin
-            f = MOIU.modify_function!(f, MOI.ScalarConstantChange(6))
+            f = MOIU.modify_function(f, MOI.ScalarConstantChange(6))
             @test MOI.constant(f) == 6
             g = deepcopy(f)
             @test g ≈ f
-            f = MOIU.modify_function!(f, MOI.ScalarCoefficientChange(z, 3))
-            f = MOIU.modify_function!(f, StochasticPrograms.DecisionCoefficientChange(y, 3))
+            f = MOIU.modify_function(f, MOI.ScalarCoefficientChange(z, 3))
+            f = MOIU.modify_function(f, StochasticPrograms.DecisionCoefficientChange(y, 3))
             @test !(g ≈ f)
             @test g.variable_part.terms == MOI.ScalarAffineTerm[]
             @test g.decision_part.terms == MOI.ScalarAffineTerm.([2, 4], [x, y])
             @test f.variable_part.terms == [MOI.ScalarAffineTerm(3, z)]
             @test f.decision_part.terms == MOI.ScalarAffineTerm.([2, 3], [x, y])
-            f = MOIU.modify_function!(f, StochasticPrograms.DecisionCoefficientChange(x, 0))
+            f = MOIU.modify_function(f, StochasticPrograms.DecisionCoefficientChange(x, 0))
             @test f.decision_part.terms == MOI.ScalarAffineTerm.([3], [y])
         end
     end
@@ -1182,16 +1181,16 @@ function test_scalar_operations(x, fx, y, fy, z, fz, w, fw)
                 ) / 2.0
             end
             @testset "modification" begin
-                f = MOIU.modify_function!(f, MOI.ScalarConstantChange(9))
+                f = MOIU.modify_function(f, MOI.ScalarConstantChange(9))
                 @test MOI.constant(f) == 9
-                f = MOIU.modify_function!(f, MOI.ScalarCoefficientChange(z, 0))
-                f = MOIU.modify_function!(f, StochasticPrograms.DecisionCoefficientChange(y, 0))
+                f = MOIU.modify_function(f, MOI.ScalarCoefficientChange(z, 0))
+                f = MOIU.modify_function(f, StochasticPrograms.DecisionCoefficientChange(y, 0))
                 @test isempty(f.variable_part.affine_terms)
                 @test f.decision_part.affine_terms == MOI.ScalarAffineTerm.([3], [x])
                 g = deepcopy(f)
                 @test f ≈ g
-                f = MOIU.modify_function!(f, MOI.ScalarCoefficientChange(z, 2))
-                f = MOIU.modify_function!(f, StochasticPrograms.DecisionCoefficientChange(y, 2))
+                f = MOIU.modify_function(f, MOI.ScalarCoefficientChange(z, 2))
+                f = MOIU.modify_function(f, StochasticPrograms.DecisionCoefficientChange(y, 2))
                 @test !(f ≈ g)
                 @test isempty(g.variable_part.affine_terms)
                 @test f.variable_part.affine_terms == MOI.ScalarAffineTerm.([2], [z])
@@ -1398,18 +1397,18 @@ function test_vector_operations(x, fx, y, fy, z, fz, w, fw)
             )
         end
         @testset "modification" begin
-            f = MOIU.modify_function!(f, MOI.VectorConstantChange([2, 2]))
+            f = MOIU.modify_function(f, MOI.VectorConstantChange([2, 2]))
             @test MOI.constant(f) == [2, 2]
             g = deepcopy(f)
             @test g ≈ f
-            f = MOIU.modify_function!(f, MOI.MultirowChange(z, [(1, 3)]))
-            f = MOIU.modify_function!(f, StochasticPrograms.DecisionMultirowChange(y, [(2, 3)]))
+            f = MOIU.modify_function(f, MOI.MultirowChange(z, [(1, 3)]))
+            f = MOIU.modify_function(f, StochasticPrograms.DecisionMultirowChange(y, [(2, 3)]))
             @test !(g ≈ f)
             @test g.variable_part.terms == MOI.VectorAffineTerm{Int}[]
             @test g.decision_part.terms == MOI.VectorAffineTerm.([1, 2], MOI.ScalarAffineTerm.([2, 4], [x, y]))
             @test f.variable_part.terms == [MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(3, z))]
             @test f.decision_part.terms == MOI.VectorAffineTerm.([1, 2], MOI.ScalarAffineTerm.([2, 3], [x, y]))
-            f = MOIU.modify_function!(f, StochasticPrograms.DecisionMultirowChange(x, [(1, 0), (2, 1)]))
+            f = MOIU.modify_function(f, StochasticPrograms.DecisionMultirowChange(x, [(1, 0), (2, 1)]))
             @test f.decision_part.terms == MOI.VectorAffineTerm.([2, 2], MOI.ScalarAffineTerm.([3, 1], [y, x]))
         end
     end

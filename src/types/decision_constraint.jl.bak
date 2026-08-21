@@ -368,14 +368,14 @@ end
 
 Return the underlying constraint data for the first-stage decision constraint referenced by `sp_cref`.
 """
-function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) where
+function JuMP.constraint_object(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}) where
     {F <: ScalarDecisionLike, S <: MOI.AbstractScalarSet}
     sp = owner_model(sp_cref)
     f = MOI.get(sp, MOI.ConstraintFunction(), sp_cref)::F
     s = MOI.get(sp, MOI.ConstraintSet(), sp_cref)::S
     return ScalarConstraint(jump_function(structure(sp), stage(sp_cref), f), s)
 end
-function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) where
+function JuMP.constraint_object(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}) where
     {F <: SingleDecision, S <: MOI.AbstractScalarSet}
     sp = owner_model(sp_cref)
     # Check if the constraint was added at creation
@@ -392,14 +392,14 @@ function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, 
     s = MOI.get(sp, MOI.ConstraintSet(), sp_cref)::S
     return ScalarConstraint(jump_function(structure(sp), stage(sp_cref), f), s)
 end
-function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) where
+function JuMP.constraint_object(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}) where
     {F <: VectorDecisionLike, S <: MOI.AbstractVectorSet}
     sp = owner_model(sp_cref)
     f = MOI.get(sp, MOI.ConstraintFunction(), sp_cref)::F
     s = MOI.get(sp, MOI.ConstraintSet(), sp_cref)::S
     return VectorConstraint(jump_function(structure(sp), stage(sp_cref), f), s, sp_cref.shape)
 end
-function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) where
+function JuMP.constraint_object(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}) where
     {F <: VectorOfDecisions, S <: MOI.AbstractVectorSet}
     sp = owner_model(sp_cref)
     # Check if the constraint was added at creation
@@ -422,7 +422,7 @@ end
 Return the underlying constraint data for the scenario-dependent decision constraint
 referenced by `sp_cref` in scenario `scenario_index`.
 """
-function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}, scenario_index::Integer) where
+function JuMP.constraint_object(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}, scenario_index::Integer) where
     {F <: ScalarDecisionLike, S <: MOI.AbstractScalarSet}
     stage(sp_cref) == 1 && error("$sp_cref is not scenario dependent, consider `constraint_object(sp_cref)`.")
     sp = owner_model(sp_cref)
@@ -432,7 +432,7 @@ function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, 
     s = MOI.get(sp, s_attr, sp_cref)::S
     return ScalarConstraint(jump_function(structure(sp), stage(sp_cref), scenario_index, f), s)
 end
-function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}, scenario_index::Integer) where
+function JuMP.constraint_object(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}, scenario_index::Integer) where
     {F <: SingleDecision, S <: MOI.AbstractScalarSet}
     stage(sp_cref) == 1 && error("$sp_cref is not scenario dependent, consider `constraint_object(sp_cref)`.")
     sp = owner_model(sp_cref)
@@ -452,7 +452,7 @@ function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, 
     s = MOI.get(sp, s_attr, sp_cref)::S
     return ScalarConstraint(jump_function(structure(sp), stage(sp_cref), scenario_index, f), s)
 end
-function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}, scenario_index::Integer) where
+function JuMP.constraint_object(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}, scenario_index::Integer) where
     {F <: VectorDecisionLike, S <: MOI.AbstractVectorSet}
     stage(sp_cref) == 1 && error("$sp_cref is not scenario dependent, consider `constraint_object(sp_cref)`.")
     sp = sp_cref.stochasticprogram
@@ -462,7 +462,7 @@ function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, 
     s = MOI.get(sp, s_attr, sp_cref)::S
     return VectorConstraint(jump_function(structure(sp), f), stage(sp_cref), scenario_index, s, sp_cref.shape)
 end
-function JuMP.constraint_object(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}, scenario_index::Integer) where
+function JuMP.constraint_object(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}, scenario_index::Integer) where
     {F <: VectorOfDecisions, S <: MOI.AbstractVectorSet}
     stage(sp_cref) == 1 && error("$sp_cref is not scenario dependent, consider `constraint_object(sp_cref)`.")
     sp = sp_cref.stochasticprogram
@@ -489,7 +489,7 @@ end
 
 Set the coefficient of `dvar` in the first-stage decision constraint `sp_cref` to `value`.
 """
-function JuMP.set_normalized_coefficient(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}},
+function JuMP.set_normalized_coefficient(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}},
                                          dvar::DecisionVariable,
                                          value) where {T, F <: Union{AffineDecisionFunction{T}, QuadraticDecisionFunction{T}}, S}
     stage(sp_cref) > 1 && error("$sp_cref is scenario dependent, consider `set_normalized_coefficient(sp_cref, dvar, scenario_index, value)`.")
@@ -504,7 +504,7 @@ end
 
 Set the coefficient of `dvar` in the decision constraint `sp_cref` in scenario `scenario_index` to `value`.
 """
-function JuMP.set_normalized_coefficient(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}},
+function JuMP.set_normalized_coefficient(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}},
                                          dvar::DecisionVariable,
                                          scenario_index::Integer,
                                          value) where {T, F <: Union{AffineDecisionFunction{T}, QuadraticDecisionFunction{T}}, S}
@@ -517,20 +517,20 @@ end
 
 Return the coefficient associated with `dvar` in the first-stage decision constraint `sp_cref` after JuMP has normalized the constraint into its standard form.
 """
-function JuMP.normalized_coefficient(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}},
+function JuMP.normalized_coefficient(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}},
                                      dvar::DecisionVariable) where {T, F <: Union{AffineDecisionFunction{T}, QuadraticDecisionFunction{T}}, S}
     stage(sp_cref) > 1 && error("$sp_cref is scenario dependent, consider `normalized_coefficient(sp_cref, dvar, scenario_index)`.")
     proxy_ = proxy(owner_model(sp_cref), stage(dvar))
     f = MOI.get(backend(proxy_), MOI.ConstraintFunction(), index(sp_cref))::F
     dref = DecisionRef(proxy_, index(dvar))
-    return JuMP.coefficient(jump_function(proxy_, f), dref)
+    return JuMP._affine_coefficient(jump_function(proxy_, f), dref)
 end
 """
     normalized_coefficient(sp_cref::SPConstraintRef, dvar::DecisionVariable, scenario_index::Integer)
 
 Return the coefficient associated with `dvar` in the decision constraint `sp_cref` in scenario `scenario_index` after JuMP has normalized the constraint into its standard form.
 """
-function JuMP.normalized_coefficient(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}},
+function JuMP.normalized_coefficient(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}},
                                      dvar::DecisionVariable,
                                      scenario_index::Integer) where {T, F <: Union{AffineDecisionFunction{T}, QuadraticDecisionFunction{T}}, S}
     stage(sp_cref) == 1 && error("$sp_cref is not scenario dependent, consider `normalized_coefficient(sp_cref, dvar)`.")
@@ -541,7 +541,7 @@ end
 
 Set the right-hand side term of the first-stage decision constraint `sp_cref` to `value`.
 """
-function JuMP.set_normalized_rhs(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}},
+function JuMP.set_normalized_rhs(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}},
                                  value) where {T,
                                                F <: Union{AffineDecisionFunction{T}, QuadraticDecisionFunction{T}},
                                                S <: MOIU.ScalarLinearSet{T}}
@@ -556,7 +556,7 @@ end
 
 Set the right-hand side term of the decision constraint `sp_cref` at `scenario_index` to `value`.
 """
-function JuMP.set_normalized_rhs(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}},
+function JuMP.set_normalized_rhs(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}},
                                  scenario_index::Integer,
                                  value) where {T,
                                                F <: Union{AffineDecisionFunction{T}, QuadraticDecisionFunction{T}},
@@ -571,7 +571,7 @@ end
 Return the right-hand side term of the first-stage decision constraint
 `sp_cref` after JuMP has converted the constraint into its normalized form.
 """
-function JuMP.normalized_rhs(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) where {T,
+function JuMP.normalized_rhs(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}) where {T,
                                            F <: Union{AffineDecisionFunction{T}, QuadraticDecisionFunction{T}},
                                            S <: MOIU.ScalarLinearSet{T}}
     stage(sp_cref) > 1 && error("$sp_cref is scenario dependent, consider `normalized_rhs(sp_cref, scenario_index)`.")
@@ -584,7 +584,7 @@ end
 Return the right-hand side term of the scenario-dependent decision constraint
 `sp_cref` at `scenario_index` after JuMP has converted the constraint into its normalized form.
 """
-function JuMP.normalized_rhs(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}},
+function JuMP.normalized_rhs(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}},
                              scenario_index::Integer) where {T,
                                                              F <: Union{AffineDecisionFunction{T}, QuadraticDecisionFunction{T}},
                                                              S <: MOIU.ScalarLinearSet{T}}
@@ -679,11 +679,11 @@ function JuMP.dual(sp_cref::SPConstraintRef; result::Int = 1)
     stage(sp_cref) > 1 && error("$sp_cref is scenario dependent, consider `dual(sp_cref, scenario_index)`.")
     return reshape_vector(_constraint_dual(sp_cref, result), dual_shape(sp_cref.shape))
 end
-function _constraint_dual(sp_cref::SPConstraintRef{<:MOI.ConstraintIndex{<:MOI.AbstractScalarFunction, <:MOI.AbstractScalarSet}},
+function _constraint_dual(sp_cref::SPConstraintRef{<:JuMP._MOICON{<:MOI.AbstractScalarFunction, <:MOI.AbstractScalarSet}},
                           result::Int)::Float64
     return MOI.get(owner_model(sp_cref), MOI.ConstraintDual(result), sp_cref)
 end
-function _constraint_dual(sp_cref::SPConstraintRef{<:MOI.ConstraintIndex{<:MOI.AbstractVectorFunction, <:MOI.AbstractVectorSet}},
+function _constraint_dual(sp_cref::SPConstraintRef{<:JuMP._MOICON{<:MOI.AbstractVectorFunction, <:MOI.AbstractVectorSet}},
                           result::Int)::Vector{Float64}
     return MOI.get(owner_model(sp_cref), MOI.ConstraintDual(result), sp_cref)
 end
@@ -698,24 +698,24 @@ function JuMP.dual(sp_cref::SPConstraintRef, scenario_index::Integer; result::In
     stage(sp_cref) == 1 && error("$sp_cref is not scenario dependent, consider `dual(sp_cref)`.")
     return reshape_vector(_constraint_dual(sp_cref, scenario_index, result), dual_shape(sp_cref.shape))
 end
-function _constraint_dual(sp_cref::SPConstraintRef{<:MOI.ConstraintIndex{<:MOI.AbstractScalarFunction, <:MOI.AbstractScalarSet}},
+function _constraint_dual(sp_cref::SPConstraintRef{<:JuMP._MOICON{<:MOI.AbstractScalarFunction, <:MOI.AbstractScalarSet}},
                           scenario_index::Integer,
                           result::Int)::Float64
     attr = ScenarioDependentConstraintAttribute(stage(sp_cref), scenario_index, MOI.ConstraintDual(result))
     return MOI.get(owner_model(sp_cref), attr, sp_cref)
 end
-function _constraint_dual(sp_cref::SPConstraintRef{<:MOI.ConstraintIndex{<:MOI.AbstractVectorFunction, <:MOI.AbstractVectorSet}},
+function _constraint_dual(sp_cref::SPConstraintRef{<:JuMP._MOICON{<:MOI.AbstractVectorFunction, <:MOI.AbstractVectorSet}},
                           scenario_index::Integer,
                           result::Int)::Vector{Float64}
     attr = ScenarioDependentConstraintAttribute(stage(sp_cref), scenario_index, MOI.ConstraintDual(result))
     return MOI.get(owner_model(sp_cref), attr, sp_cref)
 end
 
-function JuMP.shadow_price(sp_cref::SPConstraintRef{<:MOI.ConstraintIndex})
+function JuMP.shadow_price(sp_cref::SPConstraintRef{<:JuMP._MOICON})
     error("The shadow price is not defined or not implemented for this type " *
           "of constraint.")
 end
-function JuMP.shadow_price(sp_cref::SPConstraintRef{<:MOI.ConstraintIndex}, ::Integer)
+function JuMP.shadow_price(sp_cref::SPConstraintRef{<:JuMP._MOICON}, ::Integer)
     error("The shadow price is not defined or not implemented for this type " *
           "of constraint.")
 end
@@ -725,14 +725,14 @@ end
 Return the shadow price of the first-stage decision constraint `sp_cref`
 associated with result index `result` of the most-recent solution returned by the solver.
 """
-function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) where {F, S <: MOI.LessThan}
+function JuMP.shadow_price(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}) where {F, S <: MOI.LessThan}
     stage(sp_cref) > 1 && error("$sp_cref is scenario dependent, consider `shadow_price(sp_cref, scenario_index)`.")
     sp = owner_model(sp_cref)
     if !has_duals(sp)
         error("The shadow price is not available because no dual result is " *
               "available.")
     end
-    return _shadow_price_less_than(dual(sp_cref), objective_sense(sp))
+    return JuMP._shadow_price_less_than(dual(sp_cref), objective_sense(sp))
 end
 """
     shadow_price(sp_cref::SPConstraintRef, scenario_index::Integer)
@@ -741,36 +741,36 @@ Return the shadow price of the scenario-dependent decision constraint `sp_cref`
 in scenario `scenario_index` associated with result index `result` of the
 most-recent solution returned by the solver.
 """
-function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}, scenario_index::Integer) where {F, S <: MOI.LessThan}
+function JuMP.shadow_price(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}, scenario_index::Integer) where {F, S <: MOI.LessThan}
     stage(sp_cref) == 1 && error("$sp_cref is not scenario dependent, consider `shadow_price(sp_cref)`.")
     sp = owner_model(sp_cref)
     if !has_duals(sp, scenario_index)
         error("The shadow price is not available because no dual result is " *
               "available.")
     end
-    return _shadow_price_less_than(dual(sp_cref, scenario_index), objective_sense(sp, scenario_index))
+    return JuMP._shadow_price_less_than(dual(sp_cref, scenario_index), objective_sense(sp, scenario_index))
 end
 
-function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) where {F, S <: MOI.GreaterThan}
+function JuMP.shadow_price(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}) where {F, S <: MOI.GreaterThan}
     stage(sp_cref) > 1 && error("$sp_cref is scenario dependent, consider `shadow_price(sp_cref, scenario_index)`.")
     sp = owner_model(sp_cref)
     if !has_duals(sp)
         error("The shadow price is not available because no dual result is " *
               "available.")
     end
-    return _shadow_price_greater_than(dual(sp_cref), objective_sense(sp))
+    return JuMP._shadow_price_greater_than(dual(sp_cref), objective_sense(sp))
 end
-function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}, scenario_index::Integer) where {F, S <: MOI.GreaterThan}
+function JuMP.shadow_price(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}, scenario_index::Integer) where {F, S <: MOI.GreaterThan}
     stage(sp_cref) == 1 && error("$sp_cref is not scenario dependent, consider `shadow_price(sp_cref)`.")
     sp = owner_model(sp_cref)
     if !has_duals(sp, scenario_index)
         error("The shadow price is not available because no dual result is " *
               "available.")
     end
-    return _shadow_price_greater_than(dual(sp_cref, scenario_index), objective_sense(sp, scenario_index))
+    return JuMP._shadow_price_greater_than(dual(sp_cref, scenario_index), objective_sense(sp, scenario_index))
 end
 
-function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) where {F, S <: MOI.EqualTo}
+function JuMP.shadow_price(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}) where {F, S <: MOI.EqualTo}
     stage(sp_cref) > 1 && error("$sp_cref is scenario dependent, consider `shadow_price(sp_cref, scenario_index)`.")
     sp = owner_model(sp_cref)
     if !has_duals(sp)
@@ -780,12 +780,12 @@ function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) 
     sense = objective_sense(sp)
     dual_val = dual(sp_cref)
     if dual_val > 0
-        return _shadow_price_greater_than(dual_val, sense)
+        return JuMP._shadow_price_greater_than(dual_val, sense)
     else
-        return _shadow_price_less_than(dual_val, sense)
+        return JuMP._shadow_price_less_than(dual_val, sense)
     end
 end
-function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}, scenario_index::Integer) where {F, S <: MOI.EqualTo}
+function JuMP.shadow_price(sp_cref::SPConstraintRef{JuMP._MOICON{F, S}}, scenario_index::Integer) where {F, S <: MOI.EqualTo}
     stage(sp_cref) == 1 && error("$sp_cref is not scenario dependent, consider `shadow_price(sp_cref)`.")
     sp = owner_model(sp_cref)
     if !has_duals(sp, scenario_index)
@@ -795,9 +795,9 @@ function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}, 
     sense = objective_sense(sp, scenario_index)
     dual_val = dual(sp_cref, scenario_index)
     if dual_val > 0
-        return _shadow_price_greater_than(dual_val, sense)
+        return JuMP._shadow_price_greater_than(dual_val, sense)
     else
-        return _shadow_price_less_than(dual_val, sense)
+        return JuMP._shadow_price_less_than(dual_val, sense)
     end
 end
 """
@@ -851,10 +851,10 @@ function JuMP.all_constraints(stochasticprogram::StochasticProgram{N},
     is_decision_type(V) || error("Only decision constraints can be queried. For regular constraints, either annotate the relevant variable with @decision or first query the relevant JuMP subproblem and use the regular `all_constraints` function.")
     f_type = moi_function_type(function_type)
     constraint_ref_type = if set_type <: MOI.AbstractScalarSet
-        SPConstraintRef{MOI.ConstraintIndex{f_type, set_type},
+        SPConstraintRef{JuMP._MOICON{f_type, set_type},
                         ScalarShape}
     else
-        SPConstraintRef{MOI.ConstraintIndex{f_type, set_type}}
+        SPConstraintRef{JuMP._MOICON{f_type, set_type}}
     end
     m = proxy(stochasticprogram, stage)
     result = constraint_ref_type[]
@@ -925,6 +925,3 @@ end
 function JuMP.constraint_string(print_mode, sp_cref::SPConstraintRef; in_math_mode = false)
     return constraint_string(print_mode, name(sp_cref), constraint_object(sp_cref), in_math_mode = in_math_mode)
 end
-
-_shadow_price_less_than(dual, sense) = sense == MOI.MIN_SENSE ? -dual : dual
-_shadow_price_greater_than(dual, sense) = sense == MOI.MIN_SENSE ? dual : -dual

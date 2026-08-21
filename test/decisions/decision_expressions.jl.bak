@@ -27,8 +27,7 @@ using Test
 using MathOptInterface
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
-import MutableArithmetics
-const MA = MutableArithmetics
+const MA = MOI.MutableArithmetics
 
 function DecisionModel()
     m = Model()

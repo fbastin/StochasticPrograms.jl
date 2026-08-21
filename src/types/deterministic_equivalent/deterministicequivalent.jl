@@ -605,7 +605,7 @@ function JuMP.normalized_coefficient(structure::DeterministicEquivalent{N},
         mapped_vi = mapped_index(structure, index, scenario_index)
         dref = DecisionRef(structure.model, mapped_vi)
     end
-    return JuMP._affine_coefficient(jump_function(structure.model, f), dref)
+    return JuMP.coefficient(jump_function(structure.model, f), dref)
 end
 
 function JuMP.set_normalized_rhs(structure::DeterministicEquivalent,

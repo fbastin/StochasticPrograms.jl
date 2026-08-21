@@ -183,7 +183,7 @@ function MA.operate!(::typeof(*), expr::_DecisionAffOrQuadExpr, α::_Constant)
     if iszero(α)
         return MA.operate!(zero, expr)
     else
-        return map_coefficients_inplace!(x -> MA.mul!(x, α), expr)
+        return map_coefficients_inplace!(x -> x * (α isa LinearAlgebra.UniformScaling ? α.λ : α), expr)
     end
 end
 # +/- #

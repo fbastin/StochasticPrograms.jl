@@ -28,7 +28,7 @@ using LinearAlgebra
 using MathOptInterface
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
-import MutableArithmetics as MA
+const MA = MOI.MutableArithmetics
 
 function DecisionModel()
     m = Model()
@@ -53,19 +53,12 @@ end
 macro test_expression_with_string(expr, str)
     return esc(
         quote
-            realized_expr = $expr
-            if realized_expr isa Number
-                str_val = $str
-                str_val = str_val == "1" ? "1.0" : str_val
-                @test string(realized_expr) == str_val
-                @test @expression(model, $expr) == realized_expr
-            else
-                @test string(realized_expr) == $str
-                @test JuMP.isequal_canonical(
-                    @expression(model, $expr),
-                    realized_expr,
-                )
-            end
+            realized_expr = @inferred $expr
+            @test string(realized_expr) == $str
+            @test JuMP.isequal_canonical(
+                @expression(model, $expr),
+                realized_expr,
+            )
         end,
     )
 end
@@ -171,14 +164,17 @@ function test_basic_operators_number()
     @test_expression_with_string 4.13 + x "x + 4.13"
     @test_expression_with_string 3.16 - x "-x + 3.16"
     @test_expression_with_string 5.23 * x "5.23 x"
+    @test_throws ErrorException 2.94 / x
     # Number--DecisionAffExpr
     @test_expression_with_string 1.5 + aff "7.1 x + 4"
     @test_expression_with_string 1.5 - aff "-7.1 x - 1"
     @test_expression_with_string 2 * aff "14.2 x + 5"
+    @test_throws ErrorException 2 / aff
     # Number--DecisionQuadExpr
     @test_expression_with_string 1.5 + quad "7.1 x + 2.5 z*y + 4"
     @test_expression_with_string 1.5 - quad "-7.1 x - 2.5 z*y - 1"
     @test_expression_with_string 2 * quad "14.2 x + 5 z*y + 5"
+    @test_throws ErrorException 2 / quad
 end
 
 function test_basic_operators_decision()
@@ -208,42 +204,55 @@ function test_basic_operators_decision()
     @test_expression_with_string x^2 "x²"
     @test_expression_with_string x^1 "x"
     @test_expression_with_string x^0 "1"
+    @test_throws ErrorException x^3
+    @test_throws ErrorException x^1.5
     # DecisionRef--VariableRef
     @test_expression_with_string w + x "x + w"
     @test_expression_with_string w - x "-x + w"
     @test_expression_with_string w * x "x*w"
+    @test_throws ErrorException w / x
     @test_expression_with_string y * z - x "-x + z*y"
     # DecisionRef--DecisionRef
     @test_expression_with_string z + x "z + x"
     @test_expression_with_string z - x "z - x"
     @test_expression_with_string z * x "z*x"
+    @test_throws ErrorException z / x
     # VariableRef--DecisionAffExpr
     @test_expression_with_string w + aff "7.1 x + w + 2.5"
     @test_expression_with_string w - aff "-7.1 x + w - 2.5"
     @test_expression_with_string w * aff "7.1 x*w + 2.5 w"
+    @test_throws ErrorException w / aff
     @test_throws MethodError w ≤ aff
     @test_expression_with_string 7.1 * w - aff "-7.1 x + 7.1 w - 2.5"
     # DecisionRef--_VariableAffExpr
     @test_expression_with_string z + vaff "z + 7.1 y + 2.5"
     @test_expression_with_string z - vaff "z - 7.1 y - 2.5"
     @test_expression_with_string z * vaff "2.5 z + 7.1 z*y"
+    @test_throws ErrorException z / vaff
     @test_throws MethodError z ≤ vaff
     @test_expression_with_string 7.1 * x - vaff "7.1 x - 7.1 y - 2.5"
     # DecisionRef--DecisionAffExpr
     @test_expression_with_string z + aff "z + 7.1 x + 2.5"
     @test_expression_with_string z - aff "z - 7.1 x - 2.5"
     @test_expression_with_string z * aff "7.1 z*x + 2.5 z"
+    @test_throws ErrorException z / aff
     @test_throws MethodError z ≤ aff
     @test_expression_with_string 7.1 * x - aff "0 x - 2.5"
     # VariableRef--_DecisionQuadExpr
     @test_expression_with_string w + quad "7.1 x + 2.5 z*y + w + 2.5"
     @test_expression_with_string w - quad "-7.1 x - 2.5 z*y + w - 2.5"
+    @test_throws ErrorException w * quad
+    @test_throws ErrorException w / quad
     # DecisionRef--_VariableQuadExpr
     @test_expression_with_string x + vquad "x + 2.5 y*w + 7.1 y + 2.5"
     @test_expression_with_string x - vquad "x - 2.5 y*w - 7.1 y - 2.5"
+    @test_throws ErrorException x * vquad
+    @test_throws ErrorException x / vquad
     # DecisionRef--QuadExpr
     @test_expression_with_string z + quad "7.1 x + z + 2.5 z*y + 2.5"
     @test_expression_with_string z - quad "-7.1 x + z - 2.5 z*y - 2.5"
+    @test_throws ErrorException z * quad
+    @test_throws ErrorException z / quad
 end
 
 function test_basic_operators_affexpr()
@@ -275,35 +284,49 @@ function test_basic_operators_affexpr()
     @test_expression_with_string (7.1 * x + y + 2.5)^1 "7.1 x + y + 2.5"
     @test_expression_with_string aff^0 "1"
     @test_expression_with_string (7.1 * x + y + 2.5)^0 "1"
+    @test_throws ErrorException aff^3
+    @test_throws ErrorException (7.1 * x + y + 2.5)^3
+    @test_throws ErrorException aff^1.5
+    @test_throws ErrorException (7.1 * x + y + 2.5)^1.5
     # DecisionAffExpr--VariableRef
     @test_expression_with_string aff + w "7.1 x + w + y + 2.5"
     @test_expression_with_string aff - w "7.1 x - w + y + 2.5"
     @test_expression_with_string aff * w "7.1 x*w + w*y + 2.5 w"
+    @test_throws ErrorException aff / w
     @test_expression_with_string aff - y "7.1 x + 0 y + 2.5"
     # DecisionAffExpr--DecisionRef
     @test_expression_with_string aff + z "z + 7.1 x + y + 2.5"
     @test_expression_with_string aff - z "-z + 7.1 x + y + 2.5"
     @test_expression_with_string aff * z "7.1 z*x + 2.5 z + z*y"
+    @test_throws ErrorException aff / z
     @test_expression_with_string aff - 7.1 * x "0 x + y + 2.5"
     # DecisionAffExpr--_VariableAffExpr
     @test_expression_with_string aff + vaff "7.1 x + 3.4 y + 3.7"
     @test_expression_with_string aff - vaff "7.1 x - 1.4 y + 1.3"
     @test_expression_with_string aff * vaff "8.52 x + 17.04 x*y + 2.4 y² + 7.2 y + 3"
+    @test_throws ErrorException aff / vaff
     # DecisionAffExpr--DecisionAffExpr
     @test_expression_with_string aff + aff "14.2 x + 2 y + 5"
     @test_expression_with_string aff - (x + y) "6.1 x + 0 y + 2.5"
     @test_expression_with_string aff * aff "50.41 x² + 35.5 x + 14.2 x*y + y² + 5 y + 6.25"
+    @test_throws ErrorException aff / aff
     @test string((x + x) * (x + 3)) == string((x + 3) * (x + x))
     @test_expression_with_string aff - aff "0 x + 0 y"
     # _VariableAffExpr--DecisionQuadExpr
     @test_expression_with_string vaff + quad "7.1 x + 2.5 z*y + 3.4 y + 3.7"
     @test_expression_with_string vaff - quad "-7.1 x - 2.5 z*y + 1.4 y - 1.3"
+    @test_throws ErrorException vaff * quad
+    @test_throws ErrorException vaff / quad
     # DecisionAffExpr--_VariableQuadExpr
     @test_expression_with_string aff + vquad "7.1 x + w² + 3.4 y + 3.7"
     @test_expression_with_string aff - vquad "7.1 x - w² - 1.4 y + 1.3"
+    @test_throws ErrorException aff * vquad
+    @test_throws ErrorException aff / vquad
     # DecisionAffExpr--DecisionQuadExpr
     @test_expression_with_string aff + quad "14.2 x + 2.5 z*y + 2 y + 5"
     @test_expression_with_string aff - quad "0 x - 2.5 z*y + 0 y"
+    @test_throws ErrorException aff * quad
+    @test_throws ErrorException aff / quad
 end
 
 function test_basic_operators_quadexpr()
@@ -330,21 +353,33 @@ function test_basic_operators_quadexpr()
     # DecisionQuadExpr--VariableRef
     @test_expression_with_string quad + w "x² + 7.1 x + 2.5 z*y + y + w + 2.5"
     @test_expression_with_string quad - w "x² + 7.1 x + 2.5 z*y + y - w + 2.5"
+    @test_throws ErrorException quad * w
+    @test_throws ErrorException quad / w
     # DecisionQuadExpr--DecisionRef
     @test_expression_with_string quad + z "x² + 7.1 x + z + 2.5 z*y + y + 2.5"
     @test_expression_with_string quad - z "x² + 7.1 x - z + 2.5 z*y + y + 2.5"
+    @test_throws ErrorException quad * z
+    @test_throws ErrorException quad / z
     # DecisionQuadExpr--_VariableAffExpr
     @test_expression_with_string quad + vaff "x² + 7.1 x + 2.5 z*y + 3.4 y + 3.7"
     @test_expression_with_string quad - vaff "x² + 7.1 x + 2.5 z*y - 1.4 y + 1.3"
+    @test_throws ErrorException quad * vaff
+    @test_throws ErrorException quad / vaff
     # DecisionQuadExpr--DecisionAffExpr
     @test_expression_with_string quad + aff "x² + 14.2 x + 2.5 z*y + 2 y + 5"
     @test_expression_with_string quad - aff "x² + 0 x + 2.5 z*y + 0 y"
+    @test_throws ErrorException quad * aff
+    @test_throws ErrorException quad / aff
     # DecisionQuadExpr--_VariableQuadExpr
     @test_expression_with_string quad + vquad "x² + 7.1 x + 2.5 z*y + w² + 3.4 y + 3.7"
     @test_expression_with_string quad - vquad "x² + 7.1 x + 2.5 z*y - w² - 1.4 y + 1.3"
+    @test_throws ErrorException quad * vquad
+    @test_throws ErrorException quad / vquad
     # DecisionQuadExpr--DecisionQuadExpr
     @test_expression_with_string quad + (x^2 + x*y + y^2) "2 x² + 7.1 x + 2.5 z*y + x*y + y² + y + 2.5"
     @test_expression_with_string quad - (x^2 + x*y + y^2) "0 x² + 7.1 x - x*y + 2.5 z*y - y² + y + 2.5"
+    @test_throws ErrorException quad * quad
+    @test_throws ErrorException quad / quad
 end
 
 function test_dot()
@@ -421,7 +456,7 @@ function test_higher_level()
 
     @decision_variable(model, 0 ≤ dense_matrix[i in 1:3, a in [:a,:b]] ≤ 1, start = 1)
     @testset "sum(::DenseAxisArray{DecisionRef})" begin
-        # @test_expression_with_string sum(dense_matrix) "dense_matrix[1,a] + dense_matrix[2,a] + dense_matrix[3,a] + dense_matrix[1,b] + dense_matrix[2,b] + dense_matrix[3,b]"
+        @test_expression_with_string sum(dense_matrix) "dense_matrix[1,a] + dense_matrix[2,a] + dense_matrix[3,a] + dense_matrix[1,b] + dense_matrix[2,b] + dense_matrix[3,b]"
     end
 end
 

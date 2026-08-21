@@ -42,7 +42,7 @@ struct MaximumIterations <: AbstractTerminationCriterion
     end
 end
 
-function ProgressMeter.Progress(termination::MaximumIterations, str::AbstractString)
+function Progress(termination::MaximumIterations, str::AbstractString)
     return Progress(termination.parameters.maximum, 0.0, str)
 end
 

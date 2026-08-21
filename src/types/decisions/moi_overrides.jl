@@ -26,44 +26,58 @@ end
 MOIU.map_indices(index_map::Function, change::DecisionStateChange) = change
 MOIU.map_indices(index_map::Function, change::KnownValuesChange) = change
 
-function MOIU.modify_function(f::AffineDecisionFunction, change::Union{MOI.ScalarConstantChange, MOI.ScalarCoefficientChange})
-    return typeof(f)(MOIU.modify_function(f.variable_part, change),
+function MOIU.modify_function!(f::AffineDecisionFunction{T}, change::MOI.ScalarConstantChange) where T
+    return typeof(f)(MOIU.modify_function(f.variable_part, MOI.ScalarConstantChange(T(change.new_constant))),
+                     copy(f.decision_part))
+end
+function MOIU.modify_function!(f::AffineDecisionFunction{T}, change::MOI.ScalarCoefficientChange) where T
+    return typeof(f)(MOIU.modify_function(f.variable_part, MOI.ScalarCoefficientChange(change.variable, T(change.new_coefficient))),
                      copy(f.decision_part))
 end
 
-function MOIU.modify_function(f::QuadraticDecisionFunction{T}, change::Union{MOI.ScalarConstantChange, MOI.ScalarCoefficientChange}) where T
+function MOIU.modify_function!(f::QuadraticDecisionFunction{T}, change::MOI.ScalarConstantChange) where T
     return typeof(f)(
-        MOIU.modify_function(f.variable_part, change),
+        MOIU.modify_function(f.variable_part, MOI.ScalarConstantChange(T(change.new_constant))),
+        copy(f.decision_part),
+        copy(f.cross_terms))
+end
+function MOIU.modify_function!(f::QuadraticDecisionFunction{T}, change::MOI.ScalarCoefficientChange) where T
+    return typeof(f)(
+        MOIU.modify_function(f.variable_part, MOI.ScalarCoefficientChange(change.variable, T(change.new_coefficient))),
         copy(f.decision_part),
         copy(f.cross_terms))
 end
 
-function MOIU.modify_function(f::VectorAffineDecisionFunction, change::Union{MOI.VectorConstantChange, MOI.MultirowChange})
-    return typeof(f)(MOIU.modify_function(f.variable_part, change),
+function MOIU.modify_function!(f::VectorAffineDecisionFunction{T}, change::MOI.VectorConstantChange) where T
+    return typeof(f)(MOIU.modify_function(f.variable_part, MOI.VectorConstantChange(T.(change.new_constant))),
+                     copy(f.decision_part))
+end
+function MOIU.modify_function!(f::VectorAffineDecisionFunction{T}, change::MOI.MultirowChange) where T
+    return typeof(f)(MOIU.modify_function(f.variable_part, MOI.MultirowChange(change.variable, Tuple{Int64, T}[(idx, T(val)) for (idx, val) in change.new_coefficients])),
                      copy(f.decision_part))
 end
 
-function MOIU.modify_function(f::AffineDecisionFunction, change::DecisionCoefficientChange)
+function MOIU.modify_function!(f::AffineDecisionFunction{T}, change::DecisionCoefficientChange) where T
     return typeof(f)(copy(f.variable_part),
-                     MOIU.modify_function(f.decision_part,
-                                          MOI.ScalarCoefficientChange(change.decision, change.new_coefficient)))
+                     MOIU.modify_function!(f.decision_part,
+                                          MOI.ScalarCoefficientChange(change.decision, T(change.new_coefficient))))
 end
 
-function MOIU.modify_function(f::QuadraticDecisionFunction{T}, change::DecisionCoefficientChange) where T
+function MOIU.modify_function!(f::QuadraticDecisionFunction{T}, change::DecisionCoefficientChange) where T
     return typeof(f)(
         copy(f.variable_part),
-        MOIU.modify_function(f.decision_part,
-                             MOI.ScalarCoefficientChange(change.decision, change.new_coefficient)),
+        MOIU.modify_function!(f.decision_part,
+                             MOI.ScalarCoefficientChange(change.decision, T(change.new_coefficient))),
         copy(f.cross_terms))
 end
 
-function MOIU.modify_function(f::VectorAffineDecisionFunction, change::DecisionMultirowChange)
+function MOIU.modify_function!(f::VectorAffineDecisionFunction{T}, change::DecisionMultirowChange) where T
     return typeof(f)(copy(f.variable_part),
-                     MOIU.modify_function(f.decision_part,
-                                          MOI.MultirowChange(change.decision, change.new_coefficients)))
+                     MOIU.modify_function!(f.decision_part,
+                                          MOI.MultirowChange(change.decision, Tuple{Int64, T}[(idx, T(val)) for (idx, val) in change.new_coefficients])))
 end
 
-function MOIU.modify_function(f::Union{SingleDecision, AffineDecisionFunction, QuadraticDecisionFunction, VectorAffineDecisionFunction}, change::Union{DecisionStateChange, KnownValuesChange})
+function MOIU.modify_function!(f::Union{SingleDecision, AffineDecisionFunction, QuadraticDecisionFunction, VectorAffineDecisionFunction}, change::Union{DecisionStateChange, KnownValuesChange})
     # Nothing to do here, handled in bridges
     return f
 end
@@ -121,4 +135,16 @@ end
 function MOI.get(b::MOIB.AbstractBridgeOptimizer,
                  attr::DecisionIndex, ci::MOI.ConstraintIndex)
     return MOIB.call_in_context(b, ci, bridge -> MOI.get(b, attr, bridge))
+end
+
+function MOIU.shift_constant(f::AffineDecisionFunction{T}, offset) where T
+    return typeof(f)(MOIU.shift_constant(f.variable_part, offset), copy(f.decision_part))
+end
+
+function MOIU.shift_constant(f::QuadraticDecisionFunction{T}, offset) where T
+    return typeof(f)(MOIU.shift_constant(f.variable_part, offset), copy(f.decision_part), copy(f.cross_terms))
+end
+
+function MOIU.shift_constant(f::VectorAffineDecisionFunction{T}, offset) where T
+    return typeof(f)(MOIU.shift_constant(f.variable_part, offset), copy(f.decision_part))
 end

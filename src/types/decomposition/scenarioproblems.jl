@@ -519,7 +519,7 @@ function JuMP.normalized_coefficient(scenarioproblems::ScenarioProblems,
     subprob = subproblem(scenarioproblems, scenario_index)
     f = MOI.get(backend(subprob), MOI.ConstraintFunction(), ci)::F
     dref = DecisionRef(subprob, index)
-    return JuMP._affine_coefficient(jump_function(subprob, f), dref)
+    return JuMP.coefficient(jump_function(subprob, f), dref)
 end
 function JuMP.normalized_coefficient(scenarioproblems::DistributedScenarioProblems,
                                      ci::CI{F,S},
@@ -529,7 +529,7 @@ function JuMP.normalized_coefficient(scenarioproblems::DistributedScenarioProble
         subprob = fetch(sp).problems[i]
         f = MOI.get(backend(subprob), MOI.ConstraintFunction(), ci)::F
         dref = DecisionRef(subprob, index)
-        return JuMP._affine_coefficient(jump_function(subprob, f), dref)
+        return JuMP.coefficient(jump_function(subprob, f), dref)
     end
 end
 

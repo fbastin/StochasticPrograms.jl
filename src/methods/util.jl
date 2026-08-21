@@ -70,9 +70,9 @@ function copy_decision_objective!(src::JuMP.Model, dest::JuMP.Model, vars::Vecto
         src_var = decision_by_name(src, name(var))
         src_var === nothing && error("Cannot copy objective function. Variable $var not in src model.")
         # Get current coeff if var present in second stage objective
-        old_coeff = JuMP._affine_coefficient(dest_obj, var)
+        old_coeff = JuMP.coefficient(dest_obj, var)
         # Get coeff from first stage objective
-        coeff = JuMP._affine_coefficient(src_obj, src_var)
+        coeff = JuMP.coefficient(src_obj, src_var)
         if dest_obj_sense == src_obj_sense
             set_objective_coefficient(dest, var, coeff + old_coeff)
         else

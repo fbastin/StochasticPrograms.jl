@@ -55,7 +55,7 @@ function JuMP.set_objective_coefficient(model::Model, dref::DecisionRef, coeff::
     return nothing
 end
 
-function JuMP.normalized_rhs(con_ref::ConstraintRef{Model, MOI.ConstraintIndex{F, S}}) where {
+function JuMP.normalized_rhs(con_ref::ConstraintRef{Model, JuMP._MOICON{F, S}}) where {
         T, S <: Union{MOI.LessThan{T}, MOI.GreaterThan{T}, MOI.EqualTo{T}},
         F <: AffineDecisionFunction{T}}
     con = constraint_object(con_ref)
@@ -63,7 +63,7 @@ function JuMP.normalized_rhs(con_ref::ConstraintRef{Model, MOI.ConstraintIndex{F
 end
 
 function JuMP.set_normalized_coefficient(
-    con_ref::ConstraintRef{Model, MOI.ConstraintIndex{F, S}}, variable::VariableRef, coeff
+    con_ref::ConstraintRef{Model, JuMP._MOICON{F, S}}, variable::VariableRef, coeff
     ) where {S, T, F <: AffineDecisionFunction{T}}
     MOI.modify(backend(owner_model(con_ref)), index(con_ref),
                MOI.ScalarCoefficientChange(index(variable), convert(T, coeff)))
@@ -71,7 +71,7 @@ function JuMP.set_normalized_coefficient(
 end
 
 function JuMP.set_normalized_coefficient(
-    con_ref::ConstraintRef{Model, MOI.ConstraintIndex{F, S}}, decision::DecisionRef, coeff
+    con_ref::ConstraintRef{Model, JuMP._MOICON{F, S}}, decision::DecisionRef, coeff
     ) where {S, T, F <: AffineDecisionFunction{T}}
     MOI.modify(backend(owner_model(con_ref)), index(con_ref),
                DecisionCoefficientChange(index(decision), convert(T, coeff)))

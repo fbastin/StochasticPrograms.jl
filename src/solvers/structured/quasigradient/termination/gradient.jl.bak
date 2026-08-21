@@ -42,7 +42,7 @@ struct GradientThreshold{T <: AbstractFloat} <: AbstractTerminationCriterion
     end
 end
 
-function ProgressMeter.Progress(termination::GradientThreshold, str::AbstractString)
+function Progress(termination::GradientThreshold, str::AbstractString)
     @unpack τ = termination.parameters
     return ProgressThresh(τ, 0.0, str)
 end

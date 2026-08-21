@@ -1,3 +1,8 @@
+import LinearAlgebra
+
+_float(x::Number) = Float64(x)
+_float(x::LinearAlgebra.UniformScaling) = Float64(x.λ)
+
 # MIT License
 #
 # Copyright (c) 2018 Martin Biel
@@ -21,13 +26,13 @@
 # SOFTWARE.
 
 # _Constant--DecisionRef
-Base.:(+)(lhs::_Constant, rhs::DecisionRef) = DAE(_VAE(JuMP._float(lhs)), _DAE(0.0, rhs => +one(Float64)))
-Base.:(-)(lhs::_Constant, rhs::DecisionRef) = DAE(_VAE(JuMP._float(lhs)), _DAE(0.0, rhs => -one(Float64)))
+Base.:(+)(lhs::_Constant, rhs::DecisionRef) = DAE(_VAE(_float(lhs)), _DAE(0.0, rhs => +one(Float64)))
+Base.:(-)(lhs::_Constant, rhs::DecisionRef) = DAE(_VAE(_float(lhs)), _DAE(0.0, rhs => -one(Float64)))
 function Base.:(*)(lhs::_Constant, rhs::DecisionRef)
     if iszero(lhs)
         zero(DAE)
     else
-        return DAE(_VAE(0.0), _DAE(0.0, rhs => JuMP._float(lhs)))
+        return DAE(_VAE(0.0), _DAE(0.0, rhs => _float(lhs)))
     end
 end
 

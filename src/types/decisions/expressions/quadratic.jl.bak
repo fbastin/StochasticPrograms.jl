@@ -203,6 +203,12 @@ function JuMP.coefficient(quad::DecisionQuadExpr{C}, dvar::DecisionRef) where C
     return JuMP.coefficient(quad.decisions, dvar)
 end
 
+function JuMP._affine_coefficient(f::DecisionQuadExpr, variable::VariableRef)
+    return JuMP._affine_coefficient(f.variables, variable)
+end
+function JuMP._affine_coefficient(f::DecisionQuadExpr, decision::DecisionRef)
+    return JuMP._affine_coefficient(f.decisions, decision)
+end
 
 function JuMP.map_coefficients_inplace!(f::Function, quad::DecisionQuadExpr)
     JuMP.map_coefficients_inplace!(f, quad.variables)
@@ -342,7 +348,7 @@ function _cross_terms_function_string(mode, terms)
     elm = 1
     if length(term_str) > 0
         for (vars, coef) in terms
-            pre = JuMP._is_one_for_printing(coef) ? "" : JuMP._string_round(mode, abs(coef)) * " "
+            pre = JuMP._is_one_for_printing(coef) ? "" : JuMP._string_round(abs(coef)) * " "
 
             x = function_string(mode, first(vars))
             y = function_string(mode, last(vars))
