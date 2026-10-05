@@ -181,7 +181,7 @@ function lower_confidence_interval(stochasticmodel::StochasticModel{2}, sampler:
     manual_gc = MOI.get(stochasticmodel, MOI.RawOptimizerAttribute("manual_gc"))
     # Lower bound
     Qs = Vector{Float64}(undef, M)
-    progress = Progress(M, 0.0, "$(repeat(" ", indent))Lower CI    ")
+    progress = Progress(M; dt = 0.0, desc = "$(repeat(" ", indent))Lower CI    ")
     log && sleep(0.1)
     log && ProgressMeter.update!(progress, 0, keep = false, offset = offset)
     for i = 1:M
@@ -268,7 +268,7 @@ function upper_confidence_interval(stochasticmodel::StochasticModel{2}, decision
     manual_gc = MOI.get(stochasticmodel, MOI.RawOptimizerAttribute("manual_gc"))
     # Generate upper bound
     Q = Vector{Float64}(undef, T)
-    progress = Progress(T, 0.0, "$(repeat(" ", indent))Upper CI    ")
+    progress = Progress(T; dt = 0.0, desc = "$(repeat(" ", indent))Upper CI    ")
     log && sleep(0.1)
     log && ProgressMeter.update!(progress, 0, keep = false, offset = offset - 1)
     for i = 1:T

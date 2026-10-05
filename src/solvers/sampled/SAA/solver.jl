@@ -82,7 +82,7 @@ function (saa::SampleAverageApproximation)()
     @unpack num_lower_trials, num_upper_trials, num_eval_samples = saa.parameters
     N = init_num_samples
     α = 1 - confidence
-    progress = ProgressThresh(tolerance, 0.0, "SAA gap")
+    progress = ProgressThresh(tolerance; dt = 0.0, desc = "SAA gap")
     log && ProgressMeter.update!(progress, Inf,
                                  showvalues = [
                                      ("Confidence interval", NaN),

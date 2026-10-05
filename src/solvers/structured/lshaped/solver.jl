@@ -155,7 +155,7 @@ struct LShapedAlgorithm{T <: AbstractFloat,
                                               aggregation,
                                               consolidation,
                                               A(),
-                                              ProgressThresh(T(1.0), 0.0, "$(indentstr(params.indent))L-Shaped Gap "))
+                                              ProgressThresh(T(1.0); dt = 0.0, desc = "$(indentstr(params.indent))L-Shaped Gap "))
         # Initialize solver
         initialize!(lshaped)
         return lshaped

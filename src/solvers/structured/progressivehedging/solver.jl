@@ -109,7 +109,7 @@ struct ProgressiveHedgingAlgorithm{T <: AbstractFloat,
                                 A(),
                                 execution,
                                 penalization,
-                                ProgressThresh(T(1.0), 0.0, "$(indentstr(params.indent))Progressive Hedging"))
+                                ProgressThresh(T(1.0); dt = 0.0, desc = "$(indentstr(params.indent))Progressive Hedging"))
         # Initialize solver
         initialize!(ph, penaltyterm)
         return ph

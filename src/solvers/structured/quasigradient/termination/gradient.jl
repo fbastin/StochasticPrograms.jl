@@ -44,7 +44,7 @@ end
 
 function ProgressMeter.Progress(termination::GradientThreshold, str::AbstractString)
     @unpack τ = termination.parameters
-    return ProgressThresh(τ, 0.0, str)
+    return ProgressThresh(τ; dt = 0.0, desc = str)
 end
 
 function progress_value(::GradientThreshold, k::Integer, f::AbstractFloat, ∇f_norm::AbstractFloat)

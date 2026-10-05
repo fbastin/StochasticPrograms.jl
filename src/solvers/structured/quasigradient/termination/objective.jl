@@ -42,7 +42,7 @@ end
 
 function ProgressMeter.Progress(termination::ObjectiveThreshold, str::AbstractString)
     @unpack τ = termination.parameters
-    return ProgressThresh(τ, 0.0, str)
+    return ProgressThresh(τ; dt = 0.0, desc = str)
 end
 
 function progress_value(termination::ObjectiveThreshold, k::Integer, f::AbstractFloat, ∇f_norm::AbstractFloat)
