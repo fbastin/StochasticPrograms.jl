@@ -51,10 +51,17 @@ end
 function set_master_optimizer!(structure::DeterministicEquivalent, optimizer)
     # Ensure decision bridges are added
     for bridge_type in structure.model.bridge_types
-        JuMP._moi_add_bridge(structure.model.moi_backend, bridge_type)
+        _add_bridge(backend(structure.model), bridge_type)
     end
     return nothing
 end
+
+# What `JuMP._moi_add_bridge`, gone from JuMP 1.x, did: add the bridge to the
+# bridging layer under the backend, if any. The types recorded in
+# `bridge_types` by `JuMP.add_bridge` already carry their coefficient type.
+_add_bridge(model::MOIB.LazyBridgeOptimizer, bridge_type) = MOIB.add_bridge(model, bridge_type)
+_add_bridge(model::MOIU.CachingOptimizer, bridge_type) = _add_bridge(model.optimizer, bridge_type)
+_add_bridge(::Any, bridge_type) = nothing   # no optimizer attached yet, or no bridging layer
 
 function set_master_optimizer_attribute!(structure::DeterministicEquivalent, attr::MOI.AbstractOptimizerAttribute, value)
     MOI.set(backend(structure.model), attr, value)

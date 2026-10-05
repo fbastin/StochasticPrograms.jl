@@ -39,6 +39,16 @@
             @test isapprox(EV(sp), res.EV, rtol = tol)
             @test isapprox(EEV(sp), res.EEV, rtol = tol)
         end
+        @testset "Optimizer set after instantiation: $name" begin
+            # set_optimizer on a deterministic structure used to call
+            # JuMP._moi_add_bridge, which JuMP 1.x no longer has
+            sp_late = instantiate(model, _scenarios)
+            set_optimizer(sp_late, GLPK.Optimizer)
+            optimize!(sp_late)
+            @test termination_status(sp_late) == MOI.OPTIMAL
+            @test isapprox(objective_value(sp_late), res.VRP, rtol = tol)
+            @test isapprox(optimal_decision(sp_late), res.x̄, rtol = tol)
+        end
         @testset "Inequalities: $name" begin
             @test EWS(sp) <= VRP(sp)
             @test VRP(sp) <= EEV(sp)
