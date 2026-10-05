@@ -223,13 +223,17 @@ function MOI.set(optimizer::Optimizer, ::DualTolerance, limit::Real)
     return nothing
 end
 
+# Progressive hedging has no master problem: the master optimizer is the
+# subproblem optimizer. The latter must therefore not fall back on the former
+# when it is not set, as the other structured optimizers do, or each getter
+# calls the other until the stack overflows.
 function MOI.get(optimizer::Optimizer, ::MasterOptimizer)
     return MOI.get(optimizer, SubProblemOptimizer())
 end
 
 function MOI.get(optimizer::Optimizer, ::SubProblemOptimizer)
     if optimizer.subproblem_optimizer === nothing
-        return MOI.get(optimizer, MasterOptimizer())
+        return nothing
     end
     return MOI.OptimizerWithAttributes(optimizer.subproblem_optimizer, collect(optimizer.sub_params))
 end

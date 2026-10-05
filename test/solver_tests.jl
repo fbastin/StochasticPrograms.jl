@@ -110,6 +110,17 @@ penalizations = [Fixed(),
             @test isapprox(optimal_decision(sp), [30.0], rtol = 1e-6)
         end
     end
+    @testset "Progressive-hedging: optimizer getters" begin
+        # The subproblem getter fell back on the master getter, which is the
+        # subproblem getter for progressive hedging: the stack overflowed, which
+        # a try/catch in `subproblem_optimizer` silently turned into `nothing`.
+        ph = ProgressiveHedging.Optimizer()
+        @test MOI.get(ph, SubProblemOptimizer()) === nothing
+        @test MOI.get(ph, MasterOptimizer()) === nothing
+        MOI.set(ph, SubProblemOptimizer(), qpsolver)
+        @test MOI.get(ph, SubProblemOptimizer()) isa MOI.OptimizerWithAttributes
+        @test MOI.get(ph, MasterOptimizer()) isa MOI.OptimizerWithAttributes
+    end
     @info "Running progressive-hedging tests..."
     @testset "Progressive-hedging: simple problems" begin
         for (model,scenarios,res,name) in problems
