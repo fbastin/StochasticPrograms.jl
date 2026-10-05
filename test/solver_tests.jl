@@ -41,6 +41,13 @@ consolidators = [Consolidate(), DontConsolidate()]
 penalizations = [Fixed(),
                  Adaptive()]
 
+# Two structured optimizers from outside the package: one implements neither
+# MasterOptimizer nor SubProblemOptimizer, the other implements both badly.
+struct BareStructuredOptimizer <: StochasticPrograms.AbstractStructuredOptimizer end
+struct FaultyStructuredOptimizer <: StochasticPrograms.AbstractStructuredOptimizer end
+MOI.get(::FaultyStructuredOptimizer, ::MasterOptimizer) = error("faulty master optimizer getter")
+MOI.get(::FaultyStructuredOptimizer, ::SubProblemOptimizer) = error("faulty subproblem optimizer getter")
+
 @testset "Structured Solvers" begin
     @info "Running L-shaped tests..."
     @testset "L-shaped: simple problems" begin
@@ -120,6 +127,17 @@ penalizations = [Fixed(),
         MOI.set(ph, SubProblemOptimizer(), qpsolver)
         @test MOI.get(ph, SubProblemOptimizer()) isa MOI.OptimizerWithAttributes
         @test MOI.get(ph, MasterOptimizer()) isa MOI.OptimizerWithAttributes
+    end
+    @testset "Structured optimizers without master or subproblem optimizer" begin
+        sp_optimizer = StochasticPrograms.StochasticProgramOptimizer(nothing)
+        # not implementing the getters means that no such optimizer is set
+        @test StochasticPrograms.master_optimizer(sp_optimizer, BareStructuredOptimizer()) === nothing
+        @test StochasticPrograms.subproblem_optimizer(sp_optimizer, BareStructuredOptimizer()) === nothing
+        # but an error raised by a getter is a genuine one, and must surface
+        @test_throws "faulty master optimizer getter" StochasticPrograms.master_optimizer(
+            sp_optimizer, FaultyStructuredOptimizer())
+        @test_throws "faulty subproblem optimizer getter" StochasticPrograms.subproblem_optimizer(
+            sp_optimizer, FaultyStructuredOptimizer())
     end
     @info "Running progressive-hedging tests..."
     @testset "Progressive-hedging: simple problems" begin

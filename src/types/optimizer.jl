@@ -124,10 +124,15 @@ function subproblem_optimizer(sp_optimizer::StochasticProgramOptimizer, optimize
     return master_optimizer(sp_optimizer, optimizer)
 end
 
+# A structured optimizer need not implement `MasterOptimizer` or
+# `SubProblemOptimizer`: MOI then throws `GetAttributeNotAllowed`, which means
+# that no such optimizer is set. Any other error is a genuine one, and is not
+# swallowed; a catch-all here once hid an infinite recursion for six years.
 function master_optimizer(sp_optimizer::StochasticProgramOptimizer, optimizer::AbstractStructuredOptimizer)
     try
         return MOI.get(optimizer, MasterOptimizer())
     catch err
+        err isa MOI.GetAttributeNotAllowed || rethrow()
         return nothing
     end
 end
@@ -136,6 +141,7 @@ function subproblem_optimizer(sp_optimizer::StochasticProgramOptimizer, optimize
     try
         return MOI.get(optimizer, SubProblemOptimizer())
     catch err
+        err isa MOI.GetAttributeNotAllowed || rethrow()
         return nothing
     end
 end
