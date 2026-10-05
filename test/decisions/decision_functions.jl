@@ -1520,6 +1520,34 @@ function test_zero_vector_functions(x, fx, y, fy, z, fz, w, fw)
     @test isempty(h.variable_part.terms) && isempty(h.decision_part.terms)
 end
 
+# MOI's printer has no method for the decision functions: showing one used to
+# throw a MethodError.
+function test_show(x, fx, y, fy, z, fz, w, fw)
+    saf(terms, constant) = MOI.ScalarAffineFunction(
+        MOI.ScalarAffineTerm{Float64}[MOI.ScalarAffineTerm(c, v) for (c, v) in terms], constant)
+    sqf(terms, constant) = MOI.ScalarQuadraticFunction(
+        MOI.ScalarQuadraticTerm{Float64}[],
+        MOI.ScalarAffineTerm{Float64}[MOI.ScalarAffineTerm(c, v) for (c, v) in terms], constant)
+    vaf(terms, constants) = MOI.VectorAffineFunction(
+        MOI.VectorAffineTerm{Float64}[MOI.VectorAffineTerm(i, MOI.ScalarAffineTerm(c, v))
+                                      for (i, c, v) in terms], constants)
+    for (f, labels) in ((SingleDecision(x), ["decision"]),
+                        (VectorOfDecisions([x, y]), ["decisions"]),
+                        (AffineDecisionFunction(saf([(2.0, z)], 1.0), saf([(3.0, x)], 0.0)),
+                         ["variable part", "decision part"]),
+                        (QuadraticDecisionFunction(sqf([(2.0, z)], 1.0), sqf([(3.0, x)], 0.0), sqf([], 0.0)),
+                         ["variable part", "decision part", "cross terms"]),
+                        (VectorAffineDecisionFunction(vaf([(1, 2.0, z)], [1.0, 2.0]),
+                                                      vaf([(2, 3.0, x)], [0.0, 0.0])),
+                         ["variable part", "decision part"]))
+        shown = sprint(show, f)
+        @test startswith(shown, string(typeof(f)))
+        @test all(occursin(label * ": ", shown) for label in labels)
+        @test sprint(show, MIME("text/plain"), f) == shown
+    end
+    @test occursin("1.0 + 2.0", sprint(show, AffineDecisionFunction(saf([(2.0, z)], 1.0), saf([(3.0, x)], 0.0))))
+end
+
 function runtests()
     x = MOI.VariableIndex(1)
     fx = SingleDecision(x)
