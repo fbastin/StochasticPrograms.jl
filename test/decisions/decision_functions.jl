@@ -1415,6 +1415,70 @@ function test_vector_operations(x, fx, y, fy, z, fz, w, fw)
     end
 end
 
+# MOI requires `modify_function!` to modify its argument in place: the generic
+# `modify_function`, which MOI.Utilities.UniversalFallback applies to the
+# objective of a cached model, copies the function, calls `modify_function!` on
+# the copy and returns the copy, discarding what `modify_function!` returns.
+function test_modify_function_in_place(x, fx, y, fy, z, fz, w, fw)
+    DCC = StochasticPrograms.DecisionCoefficientChange
+    DMC = StochasticPrograms.DecisionMultirowChange
+    # The comparisons are evaluated before `@test`, which would otherwise try
+    # to print the decision functions on failure.
+    function check(f, change, expected)
+        g = MOIU.modify_function(f, change)
+        copy_modified = g ≈ expected
+        @test copy_modified
+        original_untouched = !(f ≈ expected)
+        @test original_untouched
+        h = copy(f)
+        returns_argument = MOIU.modify_function!(h, change) === h
+        @test returns_argument
+        modified_in_place = h ≈ expected
+        @test modified_in_place
+    end
+    saf(terms, constant) = MOI.ScalarAffineFunction(
+        MOI.ScalarAffineTerm{Float64}[MOI.ScalarAffineTerm(c, v) for (c, v) in terms], constant)
+    sqf(terms, constant) = MOI.ScalarQuadraticFunction(
+        MOI.ScalarQuadraticTerm{Float64}[],
+        MOI.ScalarAffineTerm{Float64}[MOI.ScalarAffineTerm(c, v) for (c, v) in terms], constant)
+    vaf(terms, constants) = MOI.VectorAffineFunction(
+        MOI.VectorAffineTerm{Float64}[MOI.VectorAffineTerm(i, MOI.ScalarAffineTerm(c, v))
+                                      for (i, c, v) in terms], constants)
+    @testset "AffineDecisionFunction" begin
+        f = AffineDecisionFunction(saf([(2.0, z)], 1.0), saf([(3.0, x)], 0.0))
+        check(f, MOI.ScalarConstantChange(5.0),
+              AffineDecisionFunction(saf([(2.0, z)], 5.0), saf([(3.0, x)], 0.0)))
+        check(f, MOI.ScalarCoefficientChange(w, 4.0),
+              AffineDecisionFunction(saf([(2.0, z), (4.0, w)], 1.0), saf([(3.0, x)], 0.0)))
+        check(f, DCC(y, 6.0),
+              AffineDecisionFunction(saf([(2.0, z)], 1.0), saf([(3.0, x), (6.0, y)], 0.0)))
+    end
+    @testset "QuadraticDecisionFunction" begin
+        f = QuadraticDecisionFunction(sqf([(2.0, z)], 1.0), sqf([(3.0, x)], 0.0), sqf([], 0.0))
+        check(f, MOI.ScalarConstantChange(5.0),
+              QuadraticDecisionFunction(sqf([(2.0, z)], 5.0), sqf([(3.0, x)], 0.0), sqf([], 0.0)))
+        check(f, MOI.ScalarCoefficientChange(w, 4.0),
+              QuadraticDecisionFunction(sqf([(2.0, z), (4.0, w)], 1.0), sqf([(3.0, x)], 0.0),
+                                        sqf([], 0.0)))
+        check(f, DCC(y, 6.0),
+              QuadraticDecisionFunction(sqf([(2.0, z)], 1.0), sqf([(3.0, x), (6.0, y)], 0.0),
+                                        sqf([], 0.0)))
+    end
+    @testset "VectorAffineDecisionFunction" begin
+        f = VectorAffineDecisionFunction(vaf([(1, 2.0, z)], [1.0, 2.0]),
+                                         vaf([(1, 3.0, x)], [0.0, 0.0]))
+        check(f, MOI.VectorConstantChange([5.0, 6.0]),
+              VectorAffineDecisionFunction(vaf([(1, 2.0, z)], [5.0, 6.0]),
+                                           vaf([(1, 3.0, x)], [0.0, 0.0])))
+        check(f, MOI.MultirowChange(w, [(2, 4.0)]),
+              VectorAffineDecisionFunction(vaf([(1, 2.0, z), (2, 4.0, w)], [1.0, 2.0]),
+                                           vaf([(1, 3.0, x)], [0.0, 0.0])))
+        check(f, DMC(y, [(2, 6.0)]),
+              VectorAffineDecisionFunction(vaf([(1, 2.0, z)], [1.0, 2.0]),
+                                           vaf([(1, 3.0, x), (2, 6.0, y)], [0.0, 0.0])))
+    end
+end
+
 function runtests()
     x = MOI.VariableIndex(1)
     fx = SingleDecision(x)

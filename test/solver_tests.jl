@@ -77,6 +77,39 @@ penalizations = [Fixed(),
             end
         end
     end
+    @testset "L-shaped: θ added before the master is first solved" begin
+        # Without a crash start, the first optimality cuts arrive while the
+        # master is still an empty caching optimizer, and θ enters the master
+        # objective through the cache. This used to be lost, so that the
+        # master minimized c'x alone: here it stopped at x = 0 with value 0.
+        @stochastic_model newsvendor begin
+            @stage 1 begin
+                @decision(newsvendor, 0 <= x <= 100)
+                @objective(newsvendor, Min, 5x)
+            end
+            @stage 2 begin
+                @known(newsvendor, x)
+                @uncertain d
+                @recourse(newsvendor, y[1:3] >= 0)
+                @constraint(newsvendor, y[1] + y[2] == x)
+                @constraint(newsvendor, y[1] + y[3] == d)
+                @objective(newsvendor, Min, -12y[1] - 2y[2])
+            end
+        end
+        demand = [@scenario(d = v, probability = p)
+                  for (v, p) in zip([10.0, 20.0, 30.0, 40.0], [0.15, 0.35, 0.35, 0.15])]
+        for aggregator in aggregators
+            sp = instantiate(newsvendor, demand, optimizer = LShaped.Optimizer)
+            set_silent(sp)
+            set_optimizer_attribute(sp, MasterOptimizer(), subsolver)
+            set_optimizer_attribute(sp, SubProblemOptimizer(), subsolver)
+            set_optimizer_attribute(sp, Aggregator(), aggregator)
+            optimize!(sp)
+            @test termination_status(sp) == MOI.OPTIMAL
+            @test isapprox(objective_value(sp), -145.0, rtol = 1e-6)
+            @test isapprox(optimal_decision(sp), [30.0], rtol = 1e-6)
+        end
+    end
     @info "Running progressive-hedging tests..."
     @testset "Progressive-hedging: simple problems" begin
         for (model,scenarios,res,name) in problems
