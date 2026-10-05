@@ -28,7 +28,11 @@ cmd = `$test_exename $test_exeflags $disttestfile`
 # Do not test on windows due to memory issues
 @static if !Sys.iswindows()
     @info "Starting distributed tests..."
-    if !success(pipeline(cmd; stdout=stdout, stderr=stderr)) && ccall(:jl_running_on_valgrind, Cint, ()) == 0
-        @error "Distributed test failed, cmd : $cmd"
+    passed = success(pipeline(cmd; stdout=stdout, stderr=stderr)) ||
+        ccall(:jl_running_on_valgrind, Cint, ()) != 0
+    passed || @error "Distributed test failed, cmd : $cmd"
+    # a failure used to be logged only, and the test suite still passed
+    @testset "Distributed tests" begin
+        @test passed
     end
 end
