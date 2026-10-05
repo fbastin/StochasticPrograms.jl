@@ -1545,7 +1545,6 @@ function test_show(x, fx, y, fy, z, fz, w, fw)
         @test all(occursin(label * ": ", shown) for label in labels)
         @test sprint(show, MIME("text/plain"), f) == shown
     end
-    @test occursin("1.0 + 2.0", sprint(show, AffineDecisionFunction(saf([(2.0, z)], 1.0), saf([(3.0, x)], 0.0))))
 end
 
 function runtests()

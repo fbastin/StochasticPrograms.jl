@@ -57,9 +57,12 @@ function set_master_optimizer!(structure::DeterministicEquivalent, optimizer)
 end
 
 # What `JuMP._moi_add_bridge`, gone from JuMP 1.x, did: add the bridge to the
-# bridging layer under the backend, if any. The types recorded in
-# `bridge_types` by `JuMP.add_bridge` already carry their coefficient type.
-_add_bridge(model::MOIB.LazyBridgeOptimizer, bridge_type) = MOIB.add_bridge(model, bridge_type)
+# bridging layer under the backend, if any. Recent versions of JuMP record the
+# bridge in `bridge_types` with its coefficient type, older ones without it.
+_add_bridge(model::MOIB.LazyBridgeOptimizer, bridge_type) =
+    MOIB.add_bridge(model, _with_coefficient_type(bridge_type))
+_with_coefficient_type(bridge_type::UnionAll) = bridge_type{Float64}
+_with_coefficient_type(bridge_type) = bridge_type
 _add_bridge(model::MOIU.CachingOptimizer, bridge_type) = _add_bridge(model.optimizer, bridge_type)
 _add_bridge(::Any, bridge_type) = nothing   # no optimizer attached yet, or no bridging layer
 
