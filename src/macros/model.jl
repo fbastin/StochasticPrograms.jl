@@ -105,10 +105,7 @@ macro stochastic_model(args...)
         def = args[2]
         model_name, def
     end
-    _error(x, str...) = begin
-        macroname = Symbol(String(x.args[1])[2:end])
-        JuMP._macro_error(macroname, prettify.(x.args[3:end]), x.args[2], str...)
-    end
+    _error(x, str...) = _macro_error(x, :stochastic_model, __source__, str...)
     stage = 0
     scenariodef = Expr(:block)
     paramdefs = Vector{Expr}()
@@ -199,7 +196,7 @@ macro stochastic_model(args...)
         end
         return x
     end
-    stage >= 2 || JuMP._macro_error(:stochastic_model, prettify.(def.args[2:end]), __source__, "Define at least two stages.")
+    stage >= 2 || _macro_error(:stochastic_model, prettify.(def.args[2:end]), __source__, "Define at least two stages.")
     code = if length(args) == 1
         # anonymous model, return resulting expression
         code = @q begin

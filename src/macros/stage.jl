@@ -88,10 +88,7 @@ Solver is default solver
 See also: [`@parameters`](@ref), [`@decision`](@ref), [`@uncertain`](@ref)
 """
 macro stage(stage, args)
-    _error(x, str...) = begin
-        macroname = Symbol(String(x.args[1])[2:end])
-        JuMP._macro_error(macroname, prettify.(x.args[3:end]), x.args[2], str...)
-    end
+    _error(x, str...) = _macro_error(x, :stage, __source__, str...)
     @capture(args, sp_Symbol = def_) || _error(args, "Invalid syntax. Expected @stage stage sp = begin ... end")
     model_name = sp
     # Flags for error checking

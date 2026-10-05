@@ -20,6 +20,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# Report a syntax error in a macro call, as `JuMP._macro_error` did before it
+# was removed from JuMP: where the call is, the call itself, and what is wrong.
+function _macro_error(macroname, args, source, str...)
+    location = source isa LineNumberNode ? "At $(source.file):$(source.line): " : ""
+    error(location, "`@$macroname($(join(args, ", ")))`: ", str...)
+end
+
+# The same for an expression `x` met inside the body of `@macroname`: a macro
+# call is reported as itself, anything else as part of the enclosing call.
+function _macro_error(x, macroname::Symbol, source, str...)
+    if Meta.isexpr(x, :macrocall)
+        name = Symbol(String(x.args[1])[2:end])
+        return _macro_error(name, prettify.(x.args[3:end]), x.args[2], str...)
+    end
+    return _macro_error(macroname, [prettify(x)], source, str...)
+end
+
 include("scenario.jl")
 include("decisions.jl")
 include("define_scenario.jl")

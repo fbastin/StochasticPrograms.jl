@@ -117,6 +117,29 @@
         @test isapprox(EV(simple_smps), simple_res.EV, rtol = tol)
         @test isapprox(EEV(simple_smps), simple_res.EEV, rtol = tol)
     end
+    @testset "Macro syntax errors are reported" begin
+        # The macros reported these through JuMP._macro_error, which JuMP 1.x
+        # no longer has: each mistake ended in an UndefVarError instead
+        @test_throws "Define at least two stages" macroexpand(@__MODULE__, :(
+            @stochastic_model one_stage begin
+                @stage 1 begin
+                    @decision(one_stage, x >= 0)
+                end
+            end))
+        @test_throws "Invalid syntax. Expected @stage stage sp = begin ... end" macroexpand(@__MODULE__, :(
+            @stage 1 begin
+                @decision(sp, x >= 0)
+            end))
+        @test_throws "Inconsistent model name" macroexpand(@__MODULE__, :(
+            m = @stochastic_model begin
+                @stage 1 begin
+                    @decision(m, x >= 0)
+                end
+                @stage 2 begin
+                    @recourse(m, y >= 0)
+                end
+            end))
+    end
     @testset "Shadow prices agree with JuMP" begin
         # Capacity x <= 4 bought at 1 per unit; the demand ξ is covered by
         # y[1] <= x, free, and y[2] at 3 per unit, at least one unit of which
