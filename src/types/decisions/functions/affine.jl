@@ -353,8 +353,8 @@ end
 
 
 function MOIU.zero_with_output_dimension(::Type{VectorAffineDecisionFunction{T}}, n::Integer) where T
-    return MOI.VectorAffineDecisionFunction{T}(MOIU.zero_with_output_dimension(MOI.VectorAffineFunction{T}, n),
-                                               MOIU.zero_with_output_dimension(MOI.VectorAffineFunction{T}, n))
+    return VectorAffineDecisionFunction{T}(MOIU.zero_with_output_dimension(MOI.VectorAffineFunction{T}, n),
+                                           MOIU.zero_with_output_dimension(MOI.VectorAffineFunction{T}, n))
 end
 
 function MOIU.substitute_variables(variable_map::Function, f::AffineDecisionFunction{T}) where T

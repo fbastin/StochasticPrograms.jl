@@ -226,7 +226,7 @@ error if several constraints have `name` as their name attribute.
                        name::String,
                        F::Type{<:Union{AbstractJuMPScalar,
                                        Vector{<:AbstractJuMPScalar},
-                                       MOI.AbstactFunction}},
+                                       MOI.AbstractFunction}},
                        S::Type{<:MOI.AbstractSet})::Union{SPConstraintRef, Nothing}
 
 Similar to the method above, except that it throws an error if the constraint is

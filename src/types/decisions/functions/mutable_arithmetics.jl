@@ -220,7 +220,7 @@ function MOIU.operate(::typeof(imag), ::Type{T}, ::SingleDecision) where T
     return zero(AffineDecisionFunction{T})
 end
 function MOIU.operate(::typeof(imag), ::Type{T}, f::VectorOfDecisions) where T
-    zero_with_output_dimension(VectorAffineDecisionFunction{T}, MOIU.output_dimension(f))
+    return MOIU.zero_with_output_dimension(VectorAffineDecisionFunction{T}, MOI.output_dimension(f))
 end
 function MOIU.operate(::typeof(imag), ::Type, f::TypedDecisionLike)
     imag(f)

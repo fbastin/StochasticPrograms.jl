@@ -425,6 +425,25 @@ function test_higher_level()
     end
 end
 
+# These four methods called `JuMP.add_to_expression`, without the `!`, which
+# does not exist: each threw an UndefVarError.
+function test_decision_part_of_quadratic()
+    model = DecisionModel()
+    x = @decision_variable(model, x)
+    y = @variable(model, y)
+    z = @decision_variable(model, z)
+    w = @variable(model, w)
+    qd = (2.5 * x * z).decisions
+    @test qd isa GenericQuadExpr{Float64, DecisionRef}
+    # DecisionRef--_DecisionQuadExpr
+    @test_expression_with_string x + qd "2.5 z*x + x"
+    @test_expression_with_string x - qd "-2.5 z*x + x"
+    # _VariableAffExpr--_DecisionQuadExpr
+    @test_expression_with_string (7.1 * y + 2.5) + qd "2.5 z*x + 7.1 y + 2.5"
+    # _VariableQuadExpr--_DecisionQuadExpr
+    @test_expression_with_string 2.5 * y * w + qd "2.5 z*x + 2.5 y*w"
+end
+
 function runtests()
     @testset "DecisionOperators" begin
         for name in names(@__MODULE__; all = true)

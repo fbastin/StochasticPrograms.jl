@@ -1506,6 +1506,20 @@ function test_normalize_constant(x, fx, y, fy, z, fz, w, fw)
     end
 end
 
+function test_zero_vector_functions(x, fx, y, fy, z, fz, w, fw)
+    # referred to MOI.VectorAffineDecisionFunction, which is not an MOI type
+    g = MOIU.zero_with_output_dimension(VectorAffineDecisionFunction{Float64}, 2)
+    @test g isa VectorAffineDecisionFunction{Float64}
+    @test MOI.output_dimension(g) == 2
+    @test MOI.constant(g) == [0.0, 0.0]
+    # used MOIU.output_dimension and an unqualified zero_with_output_dimension
+    h = MOIU.operate(imag, Float64, VectorOfDecisions([x, y]))
+    @test h isa VectorAffineDecisionFunction{Float64}
+    @test MOI.output_dimension(h) == 2
+    @test MOI.constant(h) == [0.0, 0.0]
+    @test isempty(h.variable_part.terms) && isempty(h.decision_part.terms)
+end
+
 function runtests()
     x = MOI.VariableIndex(1)
     fx = SingleDecision(x)

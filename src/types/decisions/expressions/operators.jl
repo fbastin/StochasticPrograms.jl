@@ -214,12 +214,12 @@ end
 function Base.:(+)(lhs::DecisionRef, rhs::_DecisionQuadExpr{C}) where C
     result = zero(DecisionQuadExpr{C})
     JuMP.add_to_expression!(result, lhs)
-    JuMP.add_to_expression(result, rhs)
+    JuMP.add_to_expression!(result, rhs)
     return result
 end
 function Base.:(-)(lhs::DecisionRef, rhs::_DecisionQuadExpr{C}) where C
     result = zero(DecisionQuadExpr{C})
-    JuMP.add_to_expression(result, lhs)
+    JuMP.add_to_expression!(result, lhs)
     JuMP.add_to_expression!(result, -1., rhs)
     return result
 end
@@ -273,7 +273,7 @@ end
 function Base.:(+)(lhs::_VariableAffExpr{C}, rhs::_DecisionQuadExpr{C}) where C
     result = zero(DecisionQuadExpr{C})
     JuMP.add_to_expression!(result, lhs)
-    JuMP.add_to_expression(result, rhs)
+    JuMP.add_to_expression!(result, rhs)
     return result
 end
 function Base.:(-)(lhs::_VariableAffExpr{C}, rhs::_DecisionQuadExpr{C}) where C
@@ -468,7 +468,7 @@ Base.:(*)(lhs::_VariableQuadExpr, rhs::DecisionAffExpr) = error("Cannot multiply
 function Base.:(+)(lhs::_VariableQuadExpr{C}, rhs::_DecisionQuadExpr{C}) where C
     result = zero(DecisionQuadExpr{C})
     JuMP.add_to_expression!(result, lhs)
-    JuMP.add_to_expression(result, rhs)
+    JuMP.add_to_expression!(result, rhs)
     return result
 end
 function Base.:(-)(lhs::_VariableQuadExpr{C}, rhs::_DecisionQuadExpr{C}) where C
