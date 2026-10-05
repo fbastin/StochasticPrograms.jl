@@ -779,7 +779,7 @@ function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}) 
     end
     sense = objective_sense(sp)
     dual_val = dual(sp_cref)
-    if dual_val > 0
+    if dual_val >= 0   # binding on the GreaterThan side, as in JuMP
         return _shadow_price_greater_than(dual_val, sense)
     else
         return _shadow_price_less_than(dual_val, sense)
@@ -794,7 +794,7 @@ function JuMP.shadow_price(sp_cref::SPConstraintRef{MOI.ConstraintIndex{F, S}}, 
     end
     sense = objective_sense(sp, scenario_index)
     dual_val = dual(sp_cref, scenario_index)
-    if dual_val > 0
+    if dual_val >= 0   # binding on the GreaterThan side, as in JuMP
         return _shadow_price_greater_than(dual_val, sense)
     else
         return _shadow_price_less_than(dual_val, sense)
@@ -926,5 +926,18 @@ function JuMP.constraint_string(print_mode, sp_cref::SPConstraintRef; in_math_mo
     return constraint_string(print_mode, name(sp_cref), constraint_object(sp_cref), in_math_mode = in_math_mode)
 end
 
-_shadow_price_less_than(dual, sense) = sense == MOI.MIN_SENSE ? -dual : dual
-_shadow_price_greater_than(dual, sense) = sense == MOI.MIN_SENSE ? dual : -dual
+# The shadow price is the change of the objective value under an infinitesimal
+# relaxation of the constraint: nonpositive when minimizing, nonnegative when
+# maximizing. By MOI convention, the dual of a feasible `LessThan` constraint
+# is nonpositive and that of a `GreaterThan` constraint nonnegative in a
+# minimization, hence the signs below, which are those of JuMP's `shadow_price`.
+function _shadow_price_less_than(dual, sense::MOI.OptimizationSense)
+    sense == MOI.MAX_SENSE && return -dual
+    sense == MOI.MIN_SENSE && return dual
+    error("The shadow price is not defined for feasibility problems.")
+end
+function _shadow_price_greater_than(dual, sense::MOI.OptimizationSense)
+    sense == MOI.MAX_SENSE && return dual
+    sense == MOI.MIN_SENSE && return -dual
+    error("The shadow price is not defined for feasibility problems.")
+end

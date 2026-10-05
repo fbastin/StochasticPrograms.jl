@@ -107,4 +107,57 @@
         @test isapprox(EV(simple_smps), simple_res.EV, rtol = tol)
         @test isapprox(EEV(simple_smps), simple_res.EEV, rtol = tol)
     end
+    @testset "Shadow prices agree with JuMP" begin
+        # Capacity x <= 4 bought at 1 per unit; the demand ξ is covered by
+        # y[1] <= x, free, and y[2] at 3 per unit, at least one unit of which
+        # is compulsory through the balance y[2] - s == 1 (s costs 1). Every
+        # row has a nonzero multiplier in some scenario, and the balance row
+        # takes both signs. `sign = -1` writes the same problem as a
+        # maximization.
+        for sign in (1.0, -1.0)
+            sense = sign > 0 ? MOI.MIN_SENSE : MOI.MAX_SENSE
+            shadow = @stochastic_model begin
+                @stage 1 begin
+                    @decision(model, x >= 0)
+                    @constraint(model, capacity, x <= 4)
+                    @objective(model, sense, sign * x)
+                end
+                @stage 2 begin
+                    @known(model, x)
+                    @uncertain ξ
+                    @recourse(model, y[1:2] >= 0)
+                    @recourse(model, s >= 0)
+                    @constraint(model, link, y[1] <= x)
+                    @constraint(model, demand, y[1] + y[2] >= ξ)
+                    @constraint(model, balance, y[2] - s == 1)
+                    @objective(model, sense, sign * (3y[2] + s))
+                end
+            end
+            demands = [4.0, 6.0]
+            sp = instantiate(shadow, [@scenario(ξ = d, probability = 0.5) for d in demands],
+                             optimizer = GLPK.Optimizer)
+            optimize!(sp)
+            @test termination_status(sp) == MOI.OPTIMAL
+            # the extensive form, written out as a plain JuMP model
+            m = Model(GLPK.Optimizer)
+            @variable(m, x >= 0)
+            capacity = @constraint(m, x <= 4)
+            @variable(m, y[1:2, 1:2] >= 0)
+            @variable(m, s[1:2] >= 0)
+            link = [@constraint(m, y[1, k] <= x) for k in 1:2]
+            demand = [@constraint(m, y[1, k] + y[2, k] >= demands[k]) for k in 1:2]
+            balance = [@constraint(m, y[2, k] - s[k] == 1) for k in 1:2]
+            @objective(m, sense, sign * (x + sum(0.5 * (3y[2, k] + s[k]) for k in 1:2)))
+            optimize!(m)
+            @test isapprox(shadow_price(sp[1, :capacity]), shadow_price(capacity), atol = 1e-8)
+            for (name, refs) in ((:link, link), (:demand, demand), (:balance, balance)), k in 1:2
+                @test isapprox(shadow_price(sp[2, name], k), shadow_price(refs[k]), atol = 1e-8)
+                # relaxing a row never worsens the objective
+                @test sign * shadow_price(sp[2, name], k) <= 1e-8
+            end
+            @test shadow_price(sp[1, :capacity]) ≈ -sign       # binding
+            @test shadow_price(sp[2, :balance], 1) ≈ -1.5sign  # dual of either sign
+            @test shadow_price(sp[2, :balance], 2) ≈ -0.5sign
+        end
+    end
 end
