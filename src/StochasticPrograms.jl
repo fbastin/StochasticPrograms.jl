@@ -47,9 +47,12 @@ const DenseAxisArray = JuMP.Containers.DenseAxisArray
 const SparseAxisArray = JuMP.Containers.SparseAxisArray
 const VectorizedProductIterator = JuMP.Containers.VectorizedProductIterator
 
-const MOI = MathOptInterface
-const MOIU = MOI.Utilities
-const MOIB = MOI.Bridges
+# JuMP's own bindings, not new constants with the same values: all the names
+# of JuMP are re-exported below, and two distinct bindings of `MOI` reaching
+# `Main` through `using StochasticPrograms, JuMP` make Julia 1.12 unable to
+# tell which module `Main.MOI` comes from, which breaks the serialization to
+# workers of any model whose body refers to `MOI`.
+import JuMP: MOI, MOIU, MOIB
 const VI = MOI.VariableIndex
 const CI = MOI.ConstraintIndex
 const AcceptableTermination = [MOI.OPTIMAL, MOI.LOCALLY_SOLVED, MOI.ALMOST_OPTIMAL, MOI.ALMOST_LOCALLY_SOLVED]
