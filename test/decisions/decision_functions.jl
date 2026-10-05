@@ -1479,6 +1479,33 @@ function test_modify_function_in_place(x, fx, y, fy, z, fz, w, fw)
     end
 end
 
+# The ScalarizeBridge adds the rows of a vector constraint through
+# `normalize_and_add_constraint`, which must move the constant of each row to
+# its set: MOI refuses scalar constraints whose function has a constant.
+function test_normalize_constant(x, fx, y, fy, z, fz, w, fw)
+    saf(terms, constant) = MOI.ScalarAffineFunction(
+        MOI.ScalarAffineTerm{Float64}[MOI.ScalarAffineTerm(c, v) for (c, v) in terms], constant)
+    sqf(terms, constant) = MOI.ScalarQuadraticFunction(
+        MOI.ScalarQuadraticTerm{Float64}[],
+        MOI.ScalarAffineTerm{Float64}[MOI.ScalarAffineTerm(c, v) for (c, v) in terms], constant)
+    for f in (AffineDecisionFunction(saf([(2.0, z)], -120.0), saf([(3.0, x)], 0.0)),
+              QuadraticDecisionFunction(sqf([(2.0, z)], -120.0), sqf([(3.0, x)], 0.0), sqf([], 0.0)))
+        for (set, shifted) in ((MOI.LessThan(0.0), MOI.LessThan(120.0)),
+                               (MOI.GreaterThan(1.0), MOI.GreaterThan(121.0)),
+                               (MOI.EqualTo(0.0), MOI.EqualTo(120.0)),
+                               (MOI.Interval(0.0, 1.0), MOI.Interval(120.0, 121.0)))
+            g, s = MOIU.normalize_constant(f, set)
+            @test s == shifted
+            @test MOI.constant(g) == 0.0
+            @test MOI.constant(f) == -120.0        # copied by default
+        end
+        h = copy(f)
+        g, s = MOIU.normalize_constant(h, MOI.LessThan(0.0); allow_modify_function = true)
+        @test g === h
+        @test MOI.constant(h) == 0.0
+    end
+end
+
 function runtests()
     x = MOI.VariableIndex(1)
     fx = SingleDecision(x)

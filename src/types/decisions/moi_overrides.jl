@@ -145,3 +145,21 @@ end
 function MOIU.shift_constant(f::VectorAffineDecisionFunction{T}, offset) where T
     return typeof(f)(MOIU.shift_constant(f.variable_part, offset), copy(f.decision_part))
 end
+
+# Move the constant of a scalar decision function to the set, as MOI does for
+# affine and quadratic functions. MOI's fallback leaves the function alone, and
+# scalar constraints with a nonzero constant are refused by `add_constraint`:
+# the ScalarizeBridge relies on this to split a vector constraint into rows.
+# The constant of a decision function lives in its variable part.
+function MOIU.normalize_constant(func::Union{AffineDecisionFunction{T}, QuadraticDecisionFunction{T}},
+                                 set::MOI.AbstractScalarSet;
+                                 allow_modify_function::Bool = false) where T
+    if MOIU.supports_shift_constant(typeof(set))
+        set = MOIU.shift_constant(set, -MOI.constant(func))
+        if !allow_modify_function
+            func = copy(func)
+        end
+        func.variable_part.constant = zero(T)
+    end
+    return func, set
+end
