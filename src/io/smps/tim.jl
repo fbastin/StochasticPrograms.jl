@@ -37,8 +37,8 @@ function parse_tim(filename::String)
     row_delims = Vector{Row}()
     # Parse the file
     open(filename) do io
-        firstline = split(readline(io))
-        if Symbol(firstline[1]) == :TIME
+        firstline = split(first_data_line(io))
+        if !isempty(firstline) && Symbol(firstline[1]) == :TIME
             name = join(firstline[2:end], " ")
         else
             throw(ArgumentError("`TIME` field is expected on the first line."))
@@ -48,6 +48,7 @@ function parse_tim(filename::String)
                 # Parse finished
                 break
             end
+            is_data(line) || continue
             words = split(line)
             first_word = Symbol(words[1])
             if first_word in TIM_MODES

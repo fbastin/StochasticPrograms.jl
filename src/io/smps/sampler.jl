@@ -66,13 +66,20 @@ function finite_support(sampler::SMPSSampler{T}) where T <: AbstractFloat
 end
 
 function support_size(sampler)
-    ran_var_sizes = map(values(sampler.random_variables)) do ran_var
-        return Float64(length(ran_var.support))
-    end
-    ran_vec_sizes = map(values(sampler.random_vectors)) do ran_vec
-        return Float64(length(ran_vec))
-    end
-    return reduce(*, vcat(ran_var_sizes, ran_vec_sizes))
+    # the number of outcomes of each random variable and vector (`length` of a vector is its
+    # dimension); one scenario when nothing is random
+    ran_var_sizes = (Float64(length(ran_var.support)) for ran_var in values(sampler.random_variables))
+    ran_vec_sizes = (Float64(length(ran_vec.support)) for ran_vec in values(sampler.random_vectors))
+    return prod(ran_var_sizes; init = 1.0) * prod(ran_vec_sizes; init = 1.0)
+end
+
+# Probabilities written with few digits, such as 1/6 as 0.16667, sum up to one only up to their
+# rounding, and Distributions refuses them: they are kept as written, as those of a block are
+function discrete_variable(ran_var::IndepDiscrete)
+    total = sum(ran_var.probabilities)
+    isapprox(total, 1) && return DiscreteNonParametric(ran_var.support, ran_var.probabilities)
+    @warn "The probabilities of $(ran_var.rowcol) sum up to $total; kept as written."
+    return DiscreteNonParametric(ran_var.support, ran_var.probabilities; check_args = false)
 end
 
 function SMPSSampler(sto::RawStoch{N}, stage::SMPSStage{T}) where {N, T <: AbstractFloat}
@@ -83,8 +90,7 @@ function SMPSSampler(sto::RawStoch{N}, stage::SMPSStage{T}) where {N, T <: Abstr
     for ran_var in sto.random_variables[stage.id - 1]
         inclusions[ran_var.rowcol] = ran_var.inclusion
         if ran_var isa IndepDiscrete
-            random_variables[ran_var.rowcol] =
-                DiscreteNonParametric(ran_var.support, ran_var.probabilities)
+            random_variables[ran_var.rowcol] = discrete_variable(ran_var)
         elseif ran_var isa IndepDistribution
             if ran_var.distribution == UNIFORM
                 random_variables[ran_var.rowcol] =
@@ -179,8 +185,8 @@ function full_support(sampler::SMPSSampler{T}) where T <: AbstractFloat
             push!(all_realizations[end], (π, d))
         end
     end
-    # Generate scenario for every realization combination
-    return mapreduce(vcat, Base.Iterators.product(all_realizations...)) do realization
+    # Generate scenario for every realization combination, as a vector even when there is one
+    scenarios = map(Base.Iterators.product(all_realizations...)) do realization
         π = 1.0
         samples = Dict{RowCol,T}()
         for (ρ, outcome) in realization
@@ -189,6 +195,7 @@ function full_support(sampler::SMPSSampler{T}) where T <: AbstractFloat
         end
         return create_scenario(sampler, samples; π = π)
     end
+    return vec(scenarios)
 end
 
 function create_scenario(sampler::SMPSSampler{T}, samples::Dict{RowCol,T}; π::AbstractFloat = 1.0) where T <: AbstractFloat

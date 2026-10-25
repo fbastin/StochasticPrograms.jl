@@ -98,6 +98,10 @@ const BETA = :BETA
 const LOGNORM = :LOGNORM
 const DISTRIBUTIONS = [DISCRETE, UNIFORM, NORMAL, GAMMA, BETA, LOGNORM]
 
+# Comment lines (an asterisk first) and blank lines carry no data
+is_data(line::AbstractString) = !(isempty(strip(line)) || startswith(lstrip(line), '*'))
+first_data_line(io::IO) = something(iterate(Iterators.filter(is_data, eachline(io))), ("",))[1]
+
 export
     SMPSScenario,
     SMPSSampler

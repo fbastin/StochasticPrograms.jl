@@ -71,8 +71,8 @@ function parse_cor(::Type{T}, filename::AbstractString) where T <: AbstractFloat
     bounds  = OrderedDict{Col, Vector{Pair{Symbol,T}}}()
     # Parse the file
     open(filename) do io
-        firstline = split(readline(io))
-        if Symbol(firstline[1]) == NAME
+        firstline = split(first_data_line(io))
+        if !isempty(firstline) && Symbol(firstline[1]) == NAME
             name = join(firstline[2:end], " ")
         else
             throw(ArgumentError("`NAME` field is expected on the first line."))
@@ -82,6 +82,7 @@ function parse_cor(::Type{T}, filename::AbstractString) where T <: AbstractFloat
                 # Parse finished
                 break
             end
+            is_data(line) || continue
             words = split(line)
             first_word = Symbol(words[1])
             if first_word in COR_MODES && first_word != mode

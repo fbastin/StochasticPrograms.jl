@@ -79,7 +79,7 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
     stage     = 2
     v₁        = zero(T)
     v₂        = zero(T)
-    block     = 1
+    block     = :none
     # Prepare sto data
     random_vars = ntuple(Val(N-1)) do i
         Vector{RandomVariable}()
@@ -92,12 +92,12 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
         Dict{RowCol, Int}()
     end
     ranvec_indices = ntuple(Val(N-1)) do i
-        Dict{Int, Int}()
+        Dict{Block, Int}()
     end
     # Parse the file
     data = open(filename) do io
-        firstline = split(readline(io))
-        if Symbol(firstline[1]) == :STOCH
+        firstline = split(first_data_line(io))
+        if !isempty(firstline) && Symbol(firstline[1]) == :STOCH
             name = join(firstline[2:end], " ")
         else
             throw(ArgumentError("`STOCH` field is expected on the first line."))
@@ -107,6 +107,7 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
                 # Parse finished
                 break
             end
+            is_data(line) || continue
             words = split(line)
             first_word = Symbol(words[1])
             if first_word in STO_MODES
@@ -172,7 +173,8 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
                         haskey(tim.stages, stage_name) || error("Stage name $stage_name not specified in .tim file.")
                         stage = tim.stages[stage_name]
                         prob = parse(Float64, words[4])
-                        # Check if random vector exists already
+                        # The block of this outcome, known by its name
+                        block = Block(words[2])
                         idx = get(ranvec_indices[stage - 1], block, 0)
                         ran_vec = if idx > 0
                             ran_vec = random_vecs[stage - 1][idx]
@@ -184,7 +186,6 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
                             ran_vec = BlockDiscrete(T, inclusion)
                             push!(random_vecs[stage - 1], ran_vec)
                             # Bookkeep
-                            block += 1
                             ranvec_indices[stage - 1][block] = length(random_vecs[stage - 1])
                             ran_vec
                         end
@@ -193,14 +194,7 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
                         push!(ran_vec.probabilities, prob)
                         continue
                     else
-                        length(words) == 3 || error("Malformed sto file at line $words.")
-                        col = Col(words[1])
-                        col = col == cor.rhsname ? RHS : col
-                        row = Row(words[2])
-                        val = parse(Float64, words[3])
-                        idx = ranvec_indices[stage - 1][block]
-                        ran_vec = random_vecs[stage - 1][idx]
-                        ran_vec.support[end][(row, col)] = val
+                        read_entries!(random_vecs[stage - 1][ranvec_indices[stage - 1][block]], words, cor)
                     end
                 else
                     error("Distribution $dist is not supported.")
@@ -208,12 +202,13 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
             elseif mode == SCENARIOS
                 if words[1] == "SC"
                     length(words) == 5 || error("Malformed+ sto file at line $words.")
-                    words[3] == "ROOT" || error("SCEN format currently only supported for two-stage models.")
+                    words[3] in ("ROOT", "'ROOT'") || error("SCEN format currently only supported for two-stage models.")
                     stage_name = Symbol(words[5])
                     haskey(tim.stages, stage_name) || error("Stage name $stage_name not specified in .tim file.")
                     stage = tim.stages[stage_name]
                     prob = parse(Float64, words[4])
-                    # Check if random vector exists already
+                    # The scenarios are the outcomes of a single block
+                    block = SCENARIOS
                     idx = get(ranvec_indices[stage - 1], block, 0)
                     ran_vec = if idx > 0
                         ran_vec = random_vecs[stage - 1][idx]
@@ -225,7 +220,6 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
                         ran_vec = BlockDiscrete(T, inclusion)
                         push!(random_vecs[stage - 1], ran_vec)
                         # Bookkeep
-                        block += 1
                         ranvec_indices[stage - 1][block] = length(random_vecs[stage - 1])
                         ran_vec
                     end
@@ -234,14 +228,7 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
                     push!(ran_vec.probabilities, prob)
                     continue
                 else
-                    length(words) == 3 || error("Malformed sto file at line $words.")
-                    col = Col(words[1])
-                    col = col == cor.rhsname ? RHS : col
-                    row = Row(words[2])
-                    val = parse(Float64, words[3])
-                    idx = ranvec_indices[stage - 1][block]
-                    ran_vec = random_vecs[stage - 1][idx]
-                    ran_vec.support[end][(row, col)] = val
+                    read_entries!(random_vecs[stage - 1][ranvec_indices[stage - 1][block]], words, cor)
                 end
             else
                 throw(ArgumentError("$(mode) is not a valid sto file mode."))
@@ -252,6 +239,18 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
     return RawStoch(name, random_vars, random_vecs)
 end
 parse_sto(tim::RawTime, cor::RawCor, filename::AbstractString) = parse_sto(Float64, tim, cor, filename)
+
+# The entries of a data line of a BLOCKS or SCENARIOS section, one or two (row, value) pairs of a
+# column, in the latest outcome of `ran_vec`
+function read_entries!(ran_vec::BlockDiscrete{T}, words, cor::RawCor) where T <: AbstractFloat
+    length(words) in (3, 5) || error("Malformed sto file at line $words.")
+    col = Col(words[1])
+    col = col == cor.rhsname ? RHS : col
+    for k in 2:2:length(words)
+        ran_vec.support[end][(Row(words[k]), col)] = convert(T, parse(Float64, words[k + 1]))
+    end
+    return ran_vec
+end
 
 function uncertainty_template(sto::RawStoch{N}, cor::RawCor, model::LPData{T, Matrix{T}}, stage::Integer) where {N, T}
     1 <= stage <= N || error("$(stage.id + 1) not in range 2 to $(N + 1).")

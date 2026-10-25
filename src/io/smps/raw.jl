@@ -27,7 +27,8 @@ struct RawSMPS{T <: AbstractFloat}
     sto::RawStoch
 
     function RawSMPS(tim::RawTime, cor::RawCor{T}, sto::RawStoch) where T <: AbstractFloat
-        tim.name == cor.name && tim.name == sto.name || error("Inconsistent names of SMPS files.")
+        tim.name == cor.name && tim.name == sto.name ||
+            @warn "The SMPS files name different problems: $(cor.name) (core), $(tim.name) (time), $(sto.name) (stoch)."
         return new{T}(tim.name, tim, cor, sto)
     end
 end
