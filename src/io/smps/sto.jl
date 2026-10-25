@@ -94,6 +94,7 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
     ranvec_indices = ntuple(Val(N-1)) do i
         Dict{Block, Int}()
     end
+    root_scenarios = Dict{Symbol, Int}()   # the scenarios branching from the root => their outcome
     # Parse the file
     data = open(filename) do io
         firstline = split(first_data_line(io))
@@ -202,10 +203,17 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
             elseif mode == SCENARIOS
                 if words[1] == "SC"
                     length(words) == 5 || error("Malformed+ sto file at line $words.")
-                    words[3] in ("ROOT", "'ROOT'") || error("SCEN format currently only supported for two-stage models.")
                     stage_name = Symbol(words[5])
                     haskey(tim.stages, stage_name) || error("Stage name $stage_name not specified in .tim file.")
-                    stage = tim.stages[stage_name]
+                    # A scenario branching from the root at the first period (SAPHIR's files)
+                    # sets the data of the second: the first stage is not random
+                    stage = max(tim.stages[stage_name], 2)
+                    # In a two-stage model, a scenario may also branch from one that branches
+                    # from the root (at the second period): it takes its parent's values, then
+                    # sets its own
+                    parent = words[3] in ("ROOT", "'ROOT'") ? nothing : Symbol(words[3])
+                    parent === nothing || (N == 2 && haskey(root_scenarios, parent)) ||
+                        error("SCEN format currently only supported for two-stage models.")
                     prob = parse(Float64, words[4])
                     # The scenarios are the outcomes of a single block
                     block = SCENARIOS
@@ -224,8 +232,9 @@ function parse_sto(::Type{T}, tim::RawTime, cor::RawCor, filename::AbstractStrin
                         ran_vec
                     end
                     # Update probability
-                    push!(ran_vec.support, Dict{RowCol,T}())
+                    push!(ran_vec.support, parent === nothing ? Dict{RowCol,T}() : copy(ran_vec.support[root_scenarios[parent]]))
                     push!(ran_vec.probabilities, prob)
+                    parent === nothing && (root_scenarios[Symbol(words[2])] = length(ran_vec.support))
                     continue
                 else
                     read_entries!(random_vecs[stage - 1][ranvec_indices[stage - 1][block]], words, cor)

@@ -1,6 +1,7 @@
 # The SMPS files of SPLIB and of Felt's test set, as they are written: several blocks, comment
-# lines, two entries per line, problem names that differ between files, probabilities rounded
-# to a few digits, a single scenario. Each instance is `simple` with a file of its own.
+# lines, two entries per line, scenarios branching at the first period or from a scenario,
+# problem names that differ between files, probabilities rounded to a few digits, a single
+# scenario. Each instance is `simple` with a file of its own.
 
 """The path of the instance made of `simple`'s files, its stoch file replaced by `sto` and its
 core file by `cor`."""
@@ -70,6 +71,31 @@ support_of(path) = StochasticPrograms.SMPS.full_support(read(path, SMPSSampler))
         scenarios = support_of(simple_with(read("io/smps/simple_scen.sto", String)))
         @test probability.(scenarios) ≈ probability.(simple)
         @test [(ξ.Δq, ξ.Δd₂) for ξ in scenarios] == [(ξ.Δq, ξ.Δd₂) for ξ in simple]
+    end
+    @testset "Scenarios branching at the first period" begin
+        sto = replace(read("io/smps/simple_scen.sto", String), "STAGE2" => "STAGE1")
+        scenarios = support_of(simple_with(sto))
+        @test probability.(scenarios) ≈ probability.(simple)
+        @test [(ξ.Δq, ξ.Δd₂) for ξ in scenarios] == [(ξ.Δq, ξ.Δd₂) for ξ in simple]
+    end
+    @testset "Scenarios branching from a scenario" begin
+        # as SAPHIR's: the second takes the bounds of the first, its parent, and sets its costs
+        scenarios = support_of(simple_with("""
+            STOCH         SIMPLE
+            SCENARIOS     DISCRETE
+             SC SCEN1     ROOT      0.4            STAGE1
+                Y1        OBJ       -24.0
+                Y2        OBJ       -28.0
+                RHS       Y1UP      500.0
+                RHS       Y2UP      100.0
+             SC SCEN2     SCEN1     0.6            STAGE2
+                Y1        OBJ       -28.0
+                Y2        OBJ       -32.0
+            ENDATA
+            """))
+        @test probability.(scenarios) ≈ probability.(simple)
+        @test [(ξ.Δq, ξ.Δd₂) for ξ in scenarios] ==
+              [(simple[1].Δq, simple[1].Δd₂), (simple[2].Δq, simple[1].Δd₂)]
     end
     @testset "Names that differ" begin
         path = simple_with(replace(read("io/smps/simple.sto", String), "STOCH         SIMPLE" => "STOCH         OTHER"))
