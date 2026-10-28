@@ -1,7 +1,8 @@
 # The SMPS files of SPLIB and of Felt's test set, as they are written: several blocks, comment
-# lines, two entries per line, scenarios branching at the first period or from a scenario,
-# problem names that differ between files, probabilities rounded to a few digits, a single
-# scenario. Each instance is `simple` with a file of its own.
+# lines, two entries per line, scenarios branching at the first period, a single scenario. And
+# what the reader refuses, as it always has: scenarios branching from a scenario, problem names
+# that differ between files, probabilities that do not sum up to one. Each instance is `simple`
+# with a file of its own.
 
 """The path of the instance made of `simple`'s files, its stoch file replaced by `sto` and its
 core file by `cor`."""
@@ -79,8 +80,8 @@ support_of(path) = StochasticPrograms.SMPS.full_support(read(path, SMPSSampler))
         @test [(ξ.Δq, ξ.Δd₂) for ξ in scenarios] == [(ξ.Δq, ξ.Δd₂) for ξ in simple]
     end
     @testset "Scenarios branching from a scenario" begin
-        # as SAPHIR's: the second takes the bounds of the first, its parent, and sets its costs
-        scenarios = support_of(simple_with("""
+        # as SAPHIR's: refused, the reader takes scenarios branching from the root only
+        path = simple_with("""
             STOCH         SIMPLE
             SCENARIOS     DISCRETE
              SC SCEN1     ROOT      0.4            STAGE1
@@ -92,17 +93,14 @@ support_of(path) = StochasticPrograms.SMPS.full_support(read(path, SMPSSampler))
                 Y1        OBJ       -28.0
                 Y2        OBJ       -32.0
             ENDATA
-            """))
-        @test probability.(scenarios) ≈ probability.(simple)
-        @test [(ξ.Δq, ξ.Δd₂) for ξ in scenarios] ==
-              [(simple[1].Δq, simple[1].Δd₂), (simple[2].Δq, simple[1].Δd₂)]
+            """)
+        @test_throws ErrorException support_of(path)
     end
     @testset "Names that differ" begin
         path = simple_with(replace(read("io/smps/simple.sto", String), "STOCH         SIMPLE" => "STOCH         OTHER"))
-        sampler = @test_logs (:warn, r"name different problems") read(path, SMPSSampler)
-        @test length(StochasticPrograms.SMPS.full_support(sampler)) == 2
+        @test_throws ErrorException read(path, SMPSSampler)
     end
-    @testset "Rounded probabilities" begin
+    @testset "Probabilities that do not sum up to one" begin
         path = simple_with("""
             STOCH         SIMPLE
             INDEP         DISCRETE
@@ -111,10 +109,7 @@ support_of(path) = StochasticPrograms.SMPS.full_support(read(path, SMPSSampler))
                 RHS       Y1UP      500.0          STAGE2    0.33333
             ENDATA
             """)
-        sampler = @test_logs (:warn, r"sum up to 0.9999") read(path, SMPSSampler)
-        scenarios = StochasticPrograms.SMPS.full_support(sampler)
-        @test length(scenarios) == 3
-        @test sum(probability, scenarios) ≈ 0.99999
+        @test_throws DomainError read(path, SMPSSampler)
     end
     @testset "A single scenario" begin
         one = support_of(simple_with("""

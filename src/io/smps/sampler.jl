@@ -73,15 +73,6 @@ function support_size(sampler)
     return prod(ran_var_sizes; init = 1.0) * prod(ran_vec_sizes; init = 1.0)
 end
 
-# Probabilities written with few digits, such as 1/6 as 0.16667, sum up to one only up to their
-# rounding, and Distributions refuses them: they are kept as written, as those of a block are
-function discrete_variable(ran_var::IndepDiscrete)
-    total = sum(ran_var.probabilities)
-    isapprox(total, 1) && return DiscreteNonParametric(ran_var.support, ran_var.probabilities)
-    @warn "The probabilities of $(ran_var.rowcol) sum up to $total; kept as written."
-    return DiscreteNonParametric(ran_var.support, ran_var.probabilities; check_args = false)
-end
-
 function SMPSSampler(sto::RawStoch{N}, stage::SMPSStage{T}) where {N, T <: AbstractFloat}
     2 <= stage.id <= N + 1 || error("$(stage.id) not in range 2 to $(N + 1).")
     random_variables = Dict{RowCol, Sampleable}()
@@ -90,7 +81,8 @@ function SMPSSampler(sto::RawStoch{N}, stage::SMPSStage{T}) where {N, T <: Abstr
     for ran_var in sto.random_variables[stage.id - 1]
         inclusions[ran_var.rowcol] = ran_var.inclusion
         if ran_var isa IndepDiscrete
-            random_variables[ran_var.rowcol] = discrete_variable(ran_var)
+            random_variables[ran_var.rowcol] =
+                DiscreteNonParametric(ran_var.support, ran_var.probabilities)
         elseif ran_var isa IndepDistribution
             if ran_var.distribution == UNIFORM
                 random_variables[ran_var.rowcol] =
